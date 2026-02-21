@@ -3,1982 +3,713 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ProjectPulse — Daily Progress Manager</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<title>ProjectPulse</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0a0a0f;
-    --surface: #111118;
-    --surface2: #18181f;
-    --border: #2a2a38;
-    --border2: #3a3a50;
-    --text: #e8e8f0;
-    --muted: #6b6b85;
-    --accent: #6c63ff;
-    --accent2: #a78bfa;
-    --green: #22c55e;
-    --yellow: #eab308;
-    --orange: #f97316;
-    --red: #ef4444;
-    --blue: #3b82f6;
-    --cyan: #06b6d4;
-    --pink: #ec4899;
-    --radius: 12px;
-    --radius-sm: 8px;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Syne', sans-serif;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* Noise texture overlay */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 9999;
-    opacity: 0.3;
-  }
-
-  /* HEADER */
-  header {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: rgba(10,10,15,0.85);
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--border);
-    padding: 0 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 64px;
-  }
-
-  .logo {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.5rem;
-    color: var(--text);
-    letter-spacing: -0.02em;
-  }
-
-  .logo span {
-    color: var(--accent2);
-    font-style: italic;
-  }
-
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .date-badge {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.75rem;
-    color: var(--muted);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    padding: 0.3rem 0.75rem;
-    border-radius: 100px;
-  }
-
-  .sync-btn {
-    background: var(--accent);
-    color: white;
-    border: none;
-    padding: 0.45rem 1rem;
-    border-radius: 100px;
-    font-family: 'Syne', sans-serif;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-
-  .sync-btn:hover { background: var(--accent2); transform: translateY(-1px); }
-
-  .sync-btn.syncing { animation: pulse-glow 1s infinite; }
-
-  @keyframes pulse-glow {
-    0%,100% { box-shadow: 0 0 0 0 rgba(108,99,255,0.4); }
-    50% { box-shadow: 0 0 0 8px rgba(108,99,255,0); }
-  }
-
-  /* LAYOUT */
-  .container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 2rem;
-  }
-
-  /* STATS BAR */
-  .stats-bar {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 1rem;
-    margin-bottom: 2rem;
-    animation: fadeUp 0.5s ease both;
-  }
-
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 1.2rem 1.4rem;
-    position: relative;
-    overflow: hidden;
-    transition: border-color 0.2s;
-  }
-
-  .stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: var(--accent-color, var(--accent));
-  }
-
-  .stat-card:hover { border-color: var(--border2); }
-
-  .stat-label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--muted);
-    margin-bottom: 0.4rem;
-  }
-
-  .stat-value {
-    font-family: 'DM Serif Display', serif;
-    font-size: 2.2rem;
-    line-height: 1;
-    color: var(--accent-color, var(--text));
-  }
-
-  /* TOOLBAR */
-  .toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1.5rem;
-    gap: 1rem;
-    flex-wrap: wrap;
-    animation: fadeUp 0.5s 0.1s ease both;
-  }
-
-  .toolbar-left {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-
-  .filter-btn {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    padding: 0.4rem 0.9rem;
-    border-radius: 100px;
-    font-size: 0.78rem;
-    font-family: 'Syne', sans-serif;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-  }
-
-  .filter-btn:hover, .filter-btn.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: white;
-  }
-
-  .btn-primary {
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border: none;
-    color: white;
-    padding: 0.5rem 1.2rem;
-    border-radius: var(--radius-sm);
-    font-family: 'Syne', sans-serif;
-    font-size: 0.82rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-
-  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(108,99,255,0.4); }
-
-  /* PROJECTS GRID */
-  .projects-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    animation: fadeUp 0.5s 0.2s ease both;
-  }
-
-  /* PROJECT CARD */
-  .project-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    transition: border-color 0.3s, box-shadow 0.3s;
-  }
-
-  .project-card:hover {
-    border-color: var(--border2);
-    box-shadow: 0 4px 30px rgba(0,0,0,0.4);
-  }
-
-  .project-header {
-    padding: 1.4rem 1.6rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    cursor: pointer;
-    user-select: none;
-    border-bottom: 1px solid transparent;
-    transition: border-color 0.2s;
-    position: relative;
-  }
-
-  .project-header.expanded {
-    border-bottom-color: var(--border);
-  }
-
-  .project-color-bar {
-    width: 4px;
-    height: 40px;
-    border-radius: 4px;
-    flex-shrink: 0;
-  }
-
-  .project-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .project-name {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 0.2rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .project-meta {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    color: var(--muted);
-    display: flex;
-    gap: 1rem;
-  }
-
-  .project-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-shrink: 0;
-  }
-
-  .progress-ring {
-    width: 48px;
-    height: 48px;
-    position: relative;
-    flex-shrink: 0;
-  }
-
-  .progress-ring svg {
-    transform: rotate(-90deg);
-  }
-
-  .progress-ring .bg { fill: none; stroke: var(--border2); stroke-width: 3; }
-  .progress-ring .fill { fill: none; stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset 0.6s ease; }
-
-  .progress-pct {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.6rem;
-    font-weight: 600;
-    color: var(--text);
-  }
-
-  .chevron {
-    color: var(--muted);
-    transition: transform 0.3s;
-    font-size: 1.2rem;
-    line-height: 1;
-  }
-
-  .chevron.open { transform: rotate(180deg); }
-
-  .icon-btn {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    width: 32px;
-    height: 32px;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.9rem;
-    transition: all 0.2s;
-  }
-
-  .icon-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--border2); }
-  .icon-btn.danger:hover { background: rgba(239,68,68,0.1); color: var(--red); border-color: var(--red); }
-
-  /* PROJECT BODY */
-  .project-body {
-    display: none;
-    padding: 1.4rem 1.6rem;
-    border-top: 1px solid var(--border);
-  }
-
-  .project-body.open { display: block; }
-
-  .section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1rem;
-  }
-
-  .section-title {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--muted);
-  }
-
-  /* SUBPROJECT */
-  .subprojects {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .subproject-card {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-    transition: border-color 0.2s;
-  }
-
-  .subproject-card:hover { border-color: var(--border2); }
-
-  .subproject-header {
-    padding: 0.9rem 1.1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-    cursor: pointer;
-  }
-
-  .subproject-info { flex: 1; min-width: 0; }
-
-  .subproject-name {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 0.15rem;
-  }
-
-  .subproject-aim {
-    font-size: 0.75rem;
-    color: var(--muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .subproject-body {
-    display: none;
-    padding: 1rem 1.1rem;
-    border-top: 1px solid var(--border);
-  }
-
-  .subproject-body.open { display: block; }
-
-  /* DETAIL SECTIONS */
-  .detail-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin-bottom: 1rem;
-  }
-
-  .detail-block {
-    background: rgba(255,255,255,0.02);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 0.8rem 1rem;
-  }
-
-  .detail-block-label {
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--muted);
-    margin-bottom: 0.4rem;
-    font-weight: 700;
-  }
-
-  .detail-block-value {
-    font-size: 0.82rem;
-    color: var(--text);
-    line-height: 1.5;
-  }
-
-  textarea, input[type="text"], input[type="date"] {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: 'Syne', sans-serif;
-    font-size: 0.82rem;
-    padding: 0.6rem 0.8rem;
-    border-radius: var(--radius-sm);
-    width: 100%;
-    resize: vertical;
-    transition: border-color 0.2s;
-    outline: none;
-  }
-
-  textarea:focus, input:focus { border-color: var(--accent); }
-
-  /* STATUS PILLS */
-  .status-group {
-    display: flex;
-    gap: 0.4rem;
-    flex-wrap: wrap;
-    margin-top: 0.5rem;
-  }
-
-  .status-pill {
-    padding: 0.3rem 0.7rem;
-    border-radius: 100px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    border: 1.5px solid transparent;
-    cursor: pointer;
-    transition: all 0.15s;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-
-  .status-pill[data-status="in-progress"] { border-color: var(--blue); color: var(--blue); }
-  .status-pill[data-status="in-progress"].active { background: var(--blue); color: white; }
-  .status-pill[data-status="done"] { border-color: var(--green); color: var(--green); }
-  .status-pill[data-status="done"].active { background: var(--green); color: white; }
-  .status-pill[data-status="pause"] { border-color: var(--yellow); color: var(--yellow); }
-  .status-pill[data-status="pause"].active { background: var(--yellow); color: #000; }
-  .status-pill[data-status="review"] { border-color: var(--cyan); color: var(--cyan); }
-  .status-pill[data-status="review"].active { background: var(--cyan); color: #000; }
-  .status-pill[data-status="blocked"] { border-color: var(--red); color: var(--red); }
-  .status-pill[data-status="blocked"].active { background: var(--red); color: white; }
-  .status-pill[data-status="planned"] { border-color: var(--muted); color: var(--muted); }
-  .status-pill[data-status="planned"].active { background: var(--muted); color: white; }
-
-  /* ACTIVITY LOG */
-  .activity-log {
-    margin-top: 0.8rem;
-  }
-
-  .log-entry {
-    display: flex;
-    gap: 0.8rem;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    animation: fadeIn 0.3s ease;
-  }
-
-  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-  .log-date {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    color: var(--muted);
-    white-space: nowrap;
-    padding-top: 0.15rem;
-    min-width: 70px;
-  }
-
-  .log-text {
-    font-size: 0.78rem;
-    color: var(--text);
-    line-height: 1.5;
-    flex: 1;
-  }
-
-  .log-delete {
-    color: var(--muted);
-    cursor: pointer;
-    font-size: 0.8rem;
-    padding: 0.1rem 0.3rem;
-    border-radius: 4px;
-    transition: all 0.2s;
-    background: transparent;
-    border: none;
-  }
-
-  .log-delete:hover { color: var(--red); background: rgba(239,68,68,0.1); }
-
-  /* ADD LOG */
-  .add-log-row {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.8rem;
-    align-items: flex-start;
-  }
-
-  .add-log-row textarea {
-    min-height: 60px;
-    resize: none;
-  }
-
-  .btn-sm {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 0.5rem 0.8rem;
-    border-radius: var(--radius-sm);
-    font-family: 'Syne', sans-serif;
-    font-size: 0.75rem;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.2s;
-    height: fit-content;
-  }
-
-  .btn-sm:hover { background: var(--surface2); border-color: var(--border2); }
-  .btn-sm.success { border-color: var(--green); color: var(--green); }
-  .btn-sm.success:hover { background: rgba(34,197,94,0.1); }
-
-  /* SUBGROUP TASKS */
-  .tasks-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    margin-top: 0.5rem;
-  }
-
-  .task-item {
-    display: flex;
-    align-items: center;
-    gap: 0.7rem;
-    padding: 0.5rem 0.7rem;
-    background: rgba(255,255,255,0.02);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    transition: all 0.2s;
-  }
-
-  .task-item:hover { border-color: var(--border2); }
-
-  .task-check {
-    width: 16px;
-    height: 16px;
-    border: 1.5px solid var(--border2);
-    border-radius: 4px;
-    flex-shrink: 0;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-  }
-
-  .task-check.checked {
-    background: var(--green);
-    border-color: var(--green);
-    color: white;
-    font-size: 0.65rem;
-  }
-
-  .task-text {
-    flex: 1;
-    font-size: 0.78rem;
-    color: var(--text);
-  }
-
-  .task-text.done {
-    text-decoration: line-through;
-    color: var(--muted);
-  }
-
-  /* MODAL */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.7);
-    backdrop-filter: blur(8px);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.25s;
-  }
-
-  .modal-overlay.open {
-    opacity: 1;
-    pointer-events: all;
-  }
-
-  .modal {
-    background: var(--surface);
-    border: 1px solid var(--border2);
-    border-radius: var(--radius);
-    width: 100%;
-    max-width: 520px;
-    padding: 2rem;
-    transform: translateY(20px) scale(0.98);
-    transition: transform 0.25s;
-    max-height: 90vh;
-    overflow-y: auto;
-  }
-
-  .modal-overlay.open .modal {
-    transform: translateY(0) scale(1);
-  }
-
-  .modal-title {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.5rem;
-    margin-bottom: 1.5rem;
-    color: var(--text);
-  }
-
-  .form-group {
-    margin-bottom: 1.1rem;
-  }
-
-  .form-label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--muted);
-    margin-bottom: 0.4rem;
-    display: block;
-  }
-
-  .color-picker {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .color-dot {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid transparent;
-    transition: all 0.15s;
-  }
-
-  .color-dot.selected {
-    border-color: white;
-    transform: scale(1.2);
-  }
-
-  .modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.7rem;
-    margin-top: 1.5rem;
-  }
-
-  .btn-cancel {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    padding: 0.6rem 1.2rem;
-    border-radius: var(--radius-sm);
-    font-family: 'Syne', sans-serif;
-    font-size: 0.82rem;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .btn-cancel:hover { border-color: var(--border2); color: var(--text); }
-
-  /* EMPTY STATE */
-  .empty-state {
-    text-align: center;
-    padding: 5rem 2rem;
-    color: var(--muted);
-  }
-
-  .empty-icon {
-    font-size: 3.5rem;
-    margin-bottom: 1rem;
-    opacity: 0.3;
-  }
-
-  .empty-title {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.5rem;
-    color: var(--text);
-    margin-bottom: 0.5rem;
-  }
-
-  .empty-sub {
-    font-size: 0.85rem;
-    margin-bottom: 2rem;
-  }
-
-  /* TOAST */
-  .toast-container {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    z-index: 9000;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .toast {
-    background: var(--surface2);
-    border: 1px solid var(--border2);
-    color: var(--text);
-    padding: 0.8rem 1.2rem;
-    border-radius: var(--radius-sm);
-    font-size: 0.82rem;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
-    min-width: 220px;
-  }
-
-  @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-  @keyframes fadeOut { to { opacity: 0; transform: translateX(10px); } }
-
-  /* SCROLLBAR */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-
-  /* Status indicator in project header */
-  .status-indicator {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  .status-indicator.in-progress { background: var(--blue); box-shadow: 0 0 6px var(--blue); animation: blink 2s infinite; }
-  .status-indicator.done { background: var(--green); }
-  .status-indicator.pause { background: var(--yellow); }
-  .status-indicator.review { background: var(--cyan); }
-  .status-indicator.blocked { background: var(--red); }
-  .status-indicator.planned { background: var(--muted); }
-
-  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-
-  /* REPORT VIEW */
-  .report-bar {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 0.5rem;
-  }
-
-  .view-tab {
-    flex: 1;
-    background: transparent;
-    border: none;
-    color: var(--muted);
-    padding: 0.5rem;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    font-family: 'Syne', sans-serif;
-    font-size: 0.8rem;
-    font-weight: 700;
-    transition: all 0.2s;
-  }
-
-  .view-tab.active { background: var(--accent); color: white; }
-
-  .view-panel { display: none; }
-  .view-panel.active { display: block; }
-
-  /* Report output */
-  .report-output {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 2rem;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.78rem;
-    line-height: 1.8;
-    color: var(--text);
-    white-space: pre-wrap;
-    word-break: break-word;
-    max-height: 500px;
-    overflow-y: auto;
-  }
-
-  /* API CONFIG */
-  .api-config {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 1.2rem;
-    margin-bottom: 1.5rem;
-    display: none;
-  }
-
-  .api-config.open { display: block; }
-
-  .api-config-title {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 0.8rem;
-  }
-
-  .api-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.7rem;
-  }
-
-  @media (max-width: 768px) {
-    .stats-bar { grid-template-columns: repeat(2, 1fr); }
-    .detail-grid { grid-template-columns: 1fr; }
-    .api-grid { grid-template-columns: 1fr; }
-    .project-header { flex-wrap: wrap; }
-  }
+:root{
+  --bg:#05050a;--card:#0d0d18;--card2:#111122;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#f0f0ff;--muted:#6060a0;--soft:#9090c0;
+  --violet:#7c3aed;--violet2:#a855f7;--indigo:#4f46e5;
+  --cyan:#06b6d4;--emerald:#10b981;--amber:#f59e0b;
+  --rose:#f43f5e;--orange:#f97316;--sky:#0ea5e9;
+  --pink:#ec4899;--lime:#84cc16;--teal:#14b8a6;
+  --r:14px;--rsm:8px;--rlg:20px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:
+  radial-gradient(ellipse 80% 50% at 20% 0%,rgba(124,58,237,.12) 0%,transparent 60%),
+  radial-gradient(ellipse 60% 40% at 80% 10%,rgba(6,182,212,.08) 0%,transparent 50%),
+  radial-gradient(ellipse 50% 60% at 50% 100%,rgba(16,185,129,.06) 0%,transparent 50%);
+  pointer-events:none;z-index:0;}
+body::after{content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:0;opacity:.35;}
+
+/* HEADER */
+header{position:sticky;top:0;z-index:200;background:rgba(5,5,10,.85);backdrop-filter:blur(24px) saturate(180%);border-bottom:1px solid var(--border);padding:0 2.5rem;height:68px;display:flex;align-items:center;justify-content:space-between;}
+.logo-wrap{display:flex;align-items:center;gap:.75rem;}
+.logo-icon{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--violet),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:1.15rem;box-shadow:0 0 22px rgba(124,58,237,.5);}
+.logo-text{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:700;background:linear-gradient(135deg,#fff,var(--violet2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.02em;}
+.hcenter{display:flex;align-items:center;gap:.35rem;background:var(--card);border:1px solid var(--border);border-radius:100px;padding:.3rem;}
+.vpill{padding:.35rem 1rem;border-radius:100px;font-size:.78rem;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .2s;font-family:'Outfit',sans-serif;}
+.vpill.active{background:linear-gradient(135deg,var(--violet),var(--indigo));color:white;box-shadow:0 2px 12px rgba(124,58,237,.4);}
+.hright{display:flex;align-items:center;gap:.75rem;}
+.date-pill{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--muted);background:var(--card);border:1px solid var(--border);padding:.3rem .8rem;border-radius:100px;}
+.db-btn{display:flex;align-items:center;gap:.4rem;font-size:.72rem;font-weight:600;color:var(--muted);background:var(--card);border:1px solid var(--border);padding:.3rem .8rem;border-radius:100px;cursor:pointer;transition:all .2s;font-family:'Outfit',sans-serif;}
+.db-btn:hover{border-color:var(--border2);color:var(--text);}
+.db-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);transition:all .3s;}
+.db-dot.on{background:var(--emerald);box-shadow:0 0 6px var(--emerald);animation:bpulse 2s infinite;}
+.db-dot.sync{background:var(--cyan);box-shadow:0 0 6px var(--cyan);animation:bspin 1s infinite;}
+.db-dot.err{background:var(--rose);box-shadow:0 0 6px var(--rose);}
+@keyframes bpulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes bspin{0%,100%{transform:scale(1)}50%{transform:scale(1.6)}}
+.btn-new{display:flex;align-items:center;gap:.4rem;background:linear-gradient(135deg,var(--violet),var(--violet2));border:none;color:white;padding:.5rem 1.1rem;border-radius:100px;font-family:'Outfit',sans-serif;font-size:.8rem;font-weight:600;cursor:pointer;transition:all .25s;box-shadow:0 4px 15px rgba(124,58,237,.35);}
+.btn-new:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(124,58,237,.5);}
+
+/* CONFIG DRAWER */
+.config-drawer{position:fixed;top:68px;right:0;width:360px;background:var(--card);border:1px solid var(--border2);border-right:none;border-top:none;border-radius:0 0 0 var(--rlg);padding:1.5rem;z-index:150;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);box-shadow:-20px 20px 60px rgba(0,0,0,.5);}
+.config-drawer.open{transform:translateX(0);}
+.cfg-title{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--violet2);margin-bottom:1rem;}
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.8rem;}
+.flabel{font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.3rem;display:block;}
+input[type=text],input[type=date],textarea,select{background:rgba(255,255,255,.04);border:1px solid var(--border2);color:var(--text);font-family:'Outfit',sans-serif;font-size:.82rem;padding:.55rem .8rem;border-radius:var(--rsm);width:100%;outline:none;transition:border-color .2s,box-shadow .2s;resize:vertical;}
+input:focus,textarea:focus,select:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(124,58,237,.15);}
+.btn-connect{width:100%;background:linear-gradient(135deg,var(--violet),var(--cyan));border:none;color:white;padding:.65rem;border-radius:var(--rsm);font-family:'Outfit',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s;margin-top:.3rem;}
+.btn-connect:hover{opacity:.9;transform:translateY(-1px);}
+
+/* MAIN */
+.main{position:relative;z-index:1;max-width:1300px;margin:0 auto;padding:2rem 2.5rem;}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;margin-bottom:2.5rem;animation:fadeUp .5s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.sc{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.3rem 1.5rem;position:relative;overflow:hidden;transition:transform .2s,border-color .2s,box-shadow .2s;cursor:default;}
+.sc::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--ga,transparent),var(--gb,transparent));opacity:.07;transition:opacity .2s;}
+.sc:hover{transform:translateY(-3px);border-color:var(--border2);box-shadow:0 12px 40px rgba(0,0,0,.4);}
+.sc:hover::before{opacity:.13;}
+.sc .glow{position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;background:var(--glow,transparent);filter:blur(25px);opacity:.4;}
+.slabel{font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:.5rem;}
+.sval{font-family:'Playfair Display',serif;font-size:2.8rem;line-height:1;font-weight:900;background:linear-gradient(135deg,var(--va,#fff),var(--vb,#fff));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.ssub{font-size:.7rem;color:var(--muted);margin-top:.3rem;}
+
+/* FILTER */
+.filter-strip{display:flex;align-items:center;gap:.4rem;margin-bottom:1.5rem;flex-wrap:wrap;animation:fadeUp .5s .1s ease both;}
+.fchip{padding:.35rem .9rem;border-radius:100px;font-size:.74rem;font-weight:600;cursor:pointer;border:1px solid var(--border2);background:transparent;color:var(--soft);font-family:'Outfit',sans-serif;transition:all .2s;}
+.fchip:hover{border-color:var(--border2);color:var(--text);background:var(--card);}
+.fchip.active{background:var(--cbg,var(--violet));border-color:transparent;color:white;box-shadow:0 3px 12px var(--csh,rgba(124,58,237,.4));}
+
+/* PROJECTS */
+.plist{display:flex;flex-direction:column;gap:1.2rem;animation:fadeUp .5s .15s ease both;}
+.pcard{background:var(--card);border:1px solid var(--border);border-radius:var(--rlg);overflow:hidden;transition:border-color .25s,box-shadow .25s,transform .25s;position:relative;}
+.pcard::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--pc,var(--violet)),transparent);opacity:.6;}
+.pcard:hover{border-color:var(--border2);box-shadow:0 8px 40px rgba(0,0,0,.4);transform:translateY(-2px);}
+.phead{padding:1.4rem 1.6rem;display:flex;align-items:center;gap:1.2rem;cursor:pointer;user-select:none;}
+.paccent{width:5px;height:52px;border-radius:4px;flex-shrink:0;}
+.picon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid var(--border2);}
+.pinfo{flex:1;min-width:0;}
+.pname{font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pmeta{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;}
+.pmi{font-size:.7rem;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+
+/* STATUS BADGE */
+.sbadge{display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .6rem;border-radius:100px;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border:1px solid transparent;}
+.s-planned{background:rgba(96,96,160,.15);color:var(--soft);border-color:rgba(96,96,160,.3);}
+.s-in-progress{background:rgba(14,165,233,.12);color:var(--sky);border-color:rgba(14,165,233,.3);}
+.s-review{background:rgba(168,85,247,.12);color:var(--violet2);border-color:rgba(168,85,247,.3);}
+.s-pause{background:rgba(245,158,11,.12);color:var(--amber);border-color:rgba(245,158,11,.3);}
+.s-blocked{background:rgba(244,63,94,.12);color:var(--rose);border-color:rgba(244,63,94,.3);}
+.s-done{background:rgba(16,185,129,.12);color:var(--emerald);border-color:rgba(16,185,129,.3);}
+.sdot{width:5px;height:5px;border-radius:50%;background:currentColor;}
+.s-in-progress .sdot{animation:bpulse 1.5s infinite;}
+
+/* ARC */
+.arcwrap{position:relative;width:54px;height:54px;flex-shrink:0;}
+.arcwrap svg{transform:rotate(-90deg);}
+.arc-bg{fill:none;stroke:rgba(255,255,255,.06);stroke-width:4;}
+.arc-fill{fill:none;stroke-width:4;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.4,0,.2,1);}
+.arcpct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:.65rem;font-weight:500;color:var(--text);}
+
+.pactions{display:flex;gap:.4rem;flex-shrink:0;}
+.ibtn{width:34px;height:34px;border-radius:var(--rsm);border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.85rem;transition:all .2s;}
+.ibtn:hover{background:var(--card2);color:var(--text);border-color:var(--border2);}
+.ibtn.del:hover{background:rgba(244,63,94,.1);color:var(--rose);border-color:rgba(244,63,94,.3);}
+.chev{width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:1rem;transition:transform .3s,color .2s;flex-shrink:0;}
+.chev.open{transform:rotate(180deg);color:var(--text);}
+
+/* PROJECT BODY */
+.pbody{display:none;padding:0 1.6rem 1.6rem;border-top:1px solid var(--border);}
+.pbody.open{display:block;}
+.srow{display:flex;align-items:center;justify-content:space-between;margin:1.2rem 0 .75rem;}
+.slbl{font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);}
+
+/* STATUS PICKER */
+.sprow{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1.2rem;padding:1rem;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:var(--r);}
+.sp{padding:.3rem .75rem;border-radius:100px;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;border:1.5px solid transparent;transition:all .15s;font-family:'Outfit',sans-serif;}
+.sp[data-s=planned]{border-color:rgba(96,96,160,.4);color:var(--soft);}
+.sp[data-s=planned].on{background:rgba(96,96,160,.2);color:white;}
+.sp[data-s=in-progress]{border-color:rgba(14,165,233,.4);color:var(--sky);}
+.sp[data-s=in-progress].on{background:var(--sky);color:#000;}
+.sp[data-s=review]{border-color:rgba(168,85,247,.4);color:var(--violet2);}
+.sp[data-s=review].on{background:var(--violet2);color:white;}
+.sp[data-s=pause]{border-color:rgba(245,158,11,.4);color:var(--amber);}
+.sp[data-s=pause].on{background:var(--amber);color:#000;}
+.sp[data-s=blocked]{border-color:rgba(244,63,94,.4);color:var(--rose);}
+.sp[data-s=blocked].on{background:var(--rose);color:white;}
+.sp[data-s=done]{border-color:rgba(16,185,129,.4);color:var(--emerald);}
+.sp[data-s=done].on{background:var(--emerald);color:#000;}
+
+/* INFO GRID */
+.igrid{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:1.2rem;}
+.iblk{background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:var(--r);padding:.9rem 1rem;}
+.iblk-lbl{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.5rem;}
+.iblk textarea{background:transparent;border:none;padding:0;font-size:.82rem;color:var(--soft);min-height:52px;box-shadow:none;}
+.iblk textarea:focus{border:none;box-shadow:none;color:var(--text);}
+
+/* SUBS */
+.subslist{display:flex;flex-direction:column;gap:.65rem;}
+.subcard{background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .2s;}
+.subcard:hover{border-color:var(--border2);}
+.subhead{padding:.85rem 1.1rem;display:flex;align-items:center;gap:.8rem;cursor:pointer;}
+.subdot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.subinfo{flex:1;min-width:0;}
+.subname{font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.12rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.subprev{font-size:.72rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.subbody{display:none;padding:1rem 1.1rem 1.1rem;border-top:1px solid var(--border);background:rgba(0,0,0,.2);}
+.subbody.open{display:block;}
+
+/* SUB FIELDS */
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.9rem;}
+.sfield{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:var(--rsm);padding:.7rem .8rem;}
+.sfield label{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.35rem;display:block;}
+.sfield textarea{background:transparent;border:none;padding:0;font-size:.78rem;color:var(--soft);min-height:50px;box-shadow:none;}
+.sfield textarea:focus{border:none;box-shadow:none;color:var(--text);}
+
+/* TASKS */
+.taskwrap{margin-bottom:.9rem;}
+.titem{display:flex;align-items:center;gap:.6rem;padding:.45rem .6rem;border-radius:6px;transition:background .15s;}
+.titem:hover{background:rgba(255,255,255,.03);}
+.tcheck{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border2);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.65rem;transition:all .2s;}
+.tcheck.done{background:var(--emerald);border-color:var(--emerald);color:#000;}
+.ttext{flex:1;font-size:.78rem;color:var(--soft);}
+.ttext.done{text-decoration:line-through;color:var(--muted);}
+.tdel,.ldel{background:none;border:none;color:transparent;cursor:pointer;font-size:.72rem;padding:.15rem .3rem;border-radius:4px;transition:all .15s;}
+.titem:hover .tdel,.lentry:hover .ldel{color:var(--muted);}
+.tdel:hover,.ldel:hover{color:var(--rose)!important;background:rgba(244,63,94,.1);}
+.addrow{display:flex;gap:.5rem;margin-top:.5rem;}
+.addrow input{flex:1;font-size:.78rem;padding:.45rem .7rem;}
+.btnadd{background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--violet2);padding:.45rem .8rem;border-radius:var(--rsm);font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;white-space:nowrap;transition:all .2s;}
+.btnadd:hover{background:rgba(124,58,237,.25);}
+
+/* LOG */
+.lentry{display:flex;gap:.7rem;padding:.5rem .6rem;border-radius:6px;transition:background .15s;animation:fadeIn .3s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.lentry:hover{background:rgba(255,255,255,.03);}
+.ldate{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--muted);white-space:nowrap;padding-top:.15rem;min-width:72px;}
+.ltext{flex:1;font-size:.78rem;color:var(--soft);line-height:1.5;}
+.loginrow{display:flex;gap:.5rem;margin-top:.6rem;align-items:flex-start;}
+.loginrow textarea{flex:1;min-height:64px;font-size:.78rem;resize:none;}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);z-index:500;display:flex;align-items:center;justify-content:center;padding:2rem;opacity:0;pointer-events:none;transition:opacity .25s;}
+.overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--card);border:1px solid var(--border2);border-radius:var(--rlg);padding:2rem;width:100%;max-width:500px;max-height:88vh;overflow-y:auto;transform:scale(.95) translateY(10px);transition:transform .25s cubic-bezier(.4,0,.2,1);}
+.overlay.open .modal{transform:scale(1) translateY(0);}
+.mtitle{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;margin-bottom:.25rem;background:linear-gradient(135deg,#fff,var(--violet2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.msub{font-size:.78rem;color:var(--muted);margin-bottom:1.5rem;}
+.fg{margin-bottom:1.1rem;}
+.colorrow{display:flex;gap:.5rem;flex-wrap:wrap;}
+.cdot{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:all .15s;outline:2px solid transparent;outline-offset:2px;}
+.cdot.sel{outline-color:white;transform:scale(1.15);}
+.mfooter{display:flex;justify-content:flex-end;gap:.6rem;margin-top:1.5rem;}
+.btnghost{background:transparent;border:1px solid var(--border2);color:var(--muted);padding:.55rem 1.2rem;border-radius:var(--rsm);font-family:'Outfit',sans-serif;font-size:.82rem;cursor:pointer;transition:all .2s;}
+.btnghost:hover{color:var(--text);background:var(--card2);}
+.btnsave{background:linear-gradient(135deg,var(--violet),var(--violet2));border:none;color:white;padding:.55rem 1.5rem;border-radius:var(--rsm);font-family:'Outfit',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 4px 15px rgba(124,58,237,.3);}
+.btnsave:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(124,58,237,.45);}
+
+/* REPORT */
+.rwrap{background:var(--card);border:1px solid var(--border);border-radius:var(--rlg);overflow:hidden;animation:fadeUp .4s ease both;}
+.rtbar{padding:1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;}
+.rout{padding:1.5rem;font-family:'JetBrains Mono',monospace;font-size:.76rem;line-height:1.9;color:var(--soft);white-space:pre-wrap;word-break:break-word;min-height:300px;max-height:600px;overflow-y:auto;}
+
+/* EMPTY */
+.empty{text-align:center;padding:6rem 2rem;}
+.empty-icon{font-size:4rem;margin-bottom:1rem;opacity:.2;}
+.empty-title{font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--text);margin-bottom:.5rem;}
+.empty-sub{font-size:.85rem;color:var(--muted);margin-bottom:2rem;}
+
+/* TOAST */
+.toasts{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9000;display:flex;flex-direction:column;gap:.5rem;}
+.toast{background:var(--card2);border:1px solid var(--border2);color:var(--text);padding:.7rem 1.1rem;border-radius:var(--r);font-size:.8rem;display:flex;align-items:center;gap:.6rem;min-width:200px;box-shadow:0 8px 30px rgba(0,0,0,.4);animation:tin .3s ease,tout .3s 2.7s ease forwards;}
+.toast.success{border-color:rgba(16,185,129,.4);}
+.toast.error{border-color:rgba(244,63,94,.4);}
+.toast.warn{border-color:rgba(245,158,11,.4);}
+@keyframes tin{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes tout{to{transform:translateX(110%);opacity:0}}
+
+.vp{display:none;}.vp.active{display:block;}
+.btnsub{display:flex;align-items:center;gap:.35rem;background:rgba(6,182,212,.08);border:1px solid rgba(6,182,212,.2);color:var(--cyan);padding:.4rem .9rem;border-radius:100px;font-size:.74rem;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .2s;}
+.btnsub:hover{background:rgba(6,182,212,.15);}
+
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+@media(max-width:768px){
+  .stats-row{grid-template-columns:repeat(2,1fr);}
+  .igrid,.sgrid{grid-template-columns:1fr;}
+  .config-drawer{width:100%;border-radius:0;}
+  .hcenter{display:none;}
+  header{padding:0 1rem;}
+  .main{padding:1rem;}
+}
 </style>
 </head>
 <body>
 
 <header>
-  <div class="logo">Project<span>Pulse</span></div>
-  <div class="header-right">
-    <div class="date-badge" id="currentDate"></div>
-    <button class="sync-btn" onclick="toggleApiConfig()" title="Configure Cloudflare D1">⚙ API</button>
-    <button class="sync-btn" id="syncBtn" onclick="syncToCloudflare()">↑ Sync</button>
+  <div class="logo-wrap">
+    <div class="logo-icon">⚡</div>
+    <div class="logo-text">ProjectPulse</div>
+  </div>
+  <div class="hcenter">
+    <button class="vpill active" onclick="switchView('projects',this)">📁 Projects</button>
+    <button class="vpill" onclick="switchView('report',this)">📊 Report</button>
+  </div>
+  <div class="hright">
+    <div class="date-pill" id="datePill"></div>
+    <div class="db-btn" onclick="toggleConfig()" title="Database settings">
+      <div class="db-dot" id="dbDot"></div>
+      <span id="dbLbl">Setup DB</span>
+    </div>
+    <button class="btn-new" onclick="openModal('project')">+ New Project</button>
   </div>
 </header>
 
-<div class="container">
-
-  <!-- API CONFIG -->
-  <div class="api-config" id="apiConfig">
-    <div class="api-config-title">☁ Cloudflare D1 Configuration</div>
-    <div class="api-grid">
-      <div>
-        <label class="form-label">Worker URL</label>
-        <input type="text" id="cfWorkerUrl" placeholder="https://your-worker.workers.dev" />
-      </div>
-      <div>
-        <label class="form-label">API Key (X-Auth-Key)</label>
-        <input type="text" id="cfApiKey" placeholder="your-secret-key" />
-      </div>
-      <div>
-        <label class="form-label">Account ID</label>
-        <input type="text" id="cfAccountId" placeholder="Cloudflare Account ID" />
-      </div>
-      <div>
-        <label class="form-label">Database ID</label>
-        <input type="text" id="cfDatabaseId" placeholder="D1 Database ID" />
-      </div>
-    </div>
-    <div style="margin-top:0.8rem; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-      <button class="btn-sm success" onclick="saveApiConfig()">✓ Save Config</button>
-      <button class="btn-sm" onclick="loadFromCloudflare()">↓ Load from D1</button>
-      <button class="btn-sm" onclick="exportData()">⬇ Export JSON</button>
-      <button class="btn-sm" onclick="importData()">⬆ Import JSON</button>
-      <span style="font-size:0.7rem; color:var(--muted); margin-left:auto;">Data auto-saves to localStorage</span>
-    </div>
-    <div style="margin-top:0.8rem; background:rgba(0,0,0,0.3); border-radius:6px; padding:0.8rem; font-family:'JetBrains Mono',monospace; font-size:0.65rem; color:var(--muted); line-height:1.7;">
-      <strong style="color:var(--accent2);">Worker schema (deploy to Cloudflare Workers):</strong><br>
-      • POST /sync — body: {data: JSON} — saves entire state<br>
-      • GET /load — returns saved state JSON<br>
-      • Header: X-Auth-Key: your-secret-key<br>
-      <br>
-      <strong style="color:var(--accent2);">D1 SQL init:</strong><br>
-      CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, data TEXT, updated_at INTEGER);<br>
-      <br>
-      <a href="#" onclick="downloadWorkerScript(); return false;" style="color:var(--accent2);">⬇ Download Worker Script</a>
-    </div>
+<!-- CONFIG DRAWER -->
+<div class="config-drawer" id="cfgDrawer">
+  <div class="cfg-title">☁ Cloudflare D1 — Auto Sync</div>
+  <div class="cfg-grid">
+    <div><label class="flabel">Worker URL</label><input type="text" id="cfUrl" placeholder="https://your-worker.workers.dev"/></div>
+    <div><label class="flabel">API Key</label><input type="text" id="cfKey" placeholder="your-secret-key"/></div>
   </div>
+  <button class="btn-connect" onclick="connectDB()">⚡ Connect — Auto Sync Enabled</button>
+  <div style="margin-top:.8rem;font-size:.68rem;color:var(--muted);line-height:1.8;">
+    ✅ Every change auto-saves to D1 in 2 seconds<br>
+    ✅ Page open = loads latest data automatically<br>
+    ✅ Works offline with localStorage fallback
+  </div>
+</div>
+
+<div class="main">
 
   <!-- STATS -->
-  <div class="stats-bar" id="statsBar">
-    <div class="stat-card" style="--accent-color: var(--accent2)">
-      <div class="stat-label">Total Projects</div>
-      <div class="stat-value" id="statTotal">0</div>
-    </div>
-    <div class="stat-card" style="--accent-color: var(--blue)">
-      <div class="stat-label">In Progress</div>
-      <div class="stat-value" id="statProgress">0</div>
-    </div>
-    <div class="stat-card" style="--accent-color: var(--green)">
-      <div class="stat-label">Done</div>
-      <div class="stat-value" id="statDone">0</div>
-    </div>
-    <div class="stat-card" style="--accent-color: var(--yellow)">
-      <div class="stat-label">Paused</div>
-      <div class="stat-value" id="statPause">0</div>
-    </div>
-    <div class="stat-card" style="--accent-color: var(--red)">
-      <div class="stat-label">Blocked</div>
-      <div class="stat-value" id="statBlocked">0</div>
-    </div>
+  <div class="stats-row">
+    <div class="sc" style="--ga:#7c3aed;--gb:#06b6d4;--glow:rgba(124,58,237,.6)"><div class="glow"></div><div class="slabel">Total Projects</div><div class="sval" id="sT" style="--va:#fff;--vb:#a855f7">0</div><div class="ssub" id="sSubs">0 sub-projects</div></div>
+    <div class="sc" style="--ga:#0ea5e9;--gb:#06b6d4;--glow:rgba(14,165,233,.6)"><div class="glow"></div><div class="slabel">In Progress</div><div class="sval" id="sP" style="--va:#0ea5e9;--vb:#06b6d4">0</div><div class="ssub">Active now</div></div>
+    <div class="sc" style="--ga:#10b981;--gb:#84cc16;--glow:rgba(16,185,129,.6)"><div class="glow"></div><div class="slabel">Completed</div><div class="sval" id="sD" style="--va:#10b981;--vb:#84cc16">0</div><div class="ssub">All done ✓</div></div>
+    <div class="sc" style="--ga:#f59e0b;--gb:#f97316;--glow:rgba(245,158,11,.6)"><div class="glow"></div><div class="slabel">Paused</div><div class="sval" id="sPa" style="--va:#f59e0b;--vb:#f97316">0</div><div class="ssub">On hold</div></div>
+    <div class="sc" style="--ga:#f43f5e;--gb:#ec4899;--glow:rgba(244,63,94,.6)"><div class="glow"></div><div class="slabel">Blocked</div><div class="sval" id="sBl" style="--va:#f43f5e;--vb:#ec4899">0</div><div class="ssub">Need attention</div></div>
   </div>
 
-  <!-- VIEW TABS -->
-  <div class="report-bar">
-    <button class="view-tab active" onclick="switchView('projects', this)">📁 Projects</button>
-    <button class="view-tab" onclick="switchView('report', this)">📊 Team Report</button>
+  <!-- PROJECTS PANEL -->
+  <div id="projects-panel" class="vp active">
+    <div class="filter-strip">
+      <button class="fchip active" style="--cbg:linear-gradient(135deg,#7c3aed,#4f46e5);--csh:rgba(124,58,237,.4)" onclick="doFilter('all',this)">All</button>
+      <button class="fchip" style="--cbg:var(--sky);--csh:rgba(14,165,233,.4)" onclick="doFilter('in-progress',this)">🔵 In Progress</button>
+      <button class="fchip" style="--cbg:var(--emerald);--csh:rgba(16,185,129,.4)" onclick="doFilter('done',this)">🟢 Done</button>
+      <button class="fchip" style="--cbg:var(--amber);--csh:rgba(245,158,11,.4)" onclick="doFilter('pause',this)">🟡 Paused</button>
+      <button class="fchip" style="--cbg:var(--rose);--csh:rgba(244,63,94,.4)" onclick="doFilter('blocked',this)">🔴 Blocked</button>
+      <button class="fchip" style="--cbg:var(--violet2);--csh:rgba(168,85,247,.4)" onclick="doFilter('review',this)">🟣 Review</button>
+    </div>
+    <div class="plist" id="pList"></div>
   </div>
 
-  <!-- PROJECTS VIEW -->
-  <div id="projects-panel" class="view-panel active">
-    <!-- TOOLBAR -->
-    <div class="toolbar">
-      <div class="toolbar-left">
-        <button class="filter-btn active" onclick="filterProjects('all', this)">All</button>
-        <button class="filter-btn" onclick="filterProjects('in-progress', this)">🔵 In Progress</button>
-        <button class="filter-btn" onclick="filterProjects('done', this)">🟢 Done</button>
-        <button class="filter-btn" onclick="filterProjects('pause', this)">🟡 Paused</button>
-        <button class="filter-btn" onclick="filterProjects('blocked', this)">🔴 Blocked</button>
-        <button class="filter-btn" onclick="filterProjects('review', this)">🩵 Review</button>
-        <button class="filter-btn" onclick="filterProjects('planned', this)">⚪ Planned</button>
+  <!-- REPORT PANEL -->
+  <div id="report-panel" class="vp">
+    <div class="rwrap">
+      <div class="rtbar">
+        <button class="btn-new" onclick="genReport()" style="border-radius:var(--rsm)">⚡ Generate</button>
+        <button class="btnghost" onclick="copyReport()">📋 Copy</button>
+        <select id="rFmt" style="width:auto;padding:.45rem .8rem;background:var(--card2);border-color:var(--border2);font-size:.78rem">
+          <option value="md">Markdown</option>
+          <option value="txt">Plain Text</option>
+        </select>
+        <button class="btnghost" onclick="doExport()">⬇ Export</button>
+        <button class="btnghost" onclick="doImport()">⬆ Import</button>
       </div>
-      <button class="btn-primary" onclick="openModal('project')">+ New Project</button>
+      <div class="rout" id="rOut">Click ⚡ Generate to create a shareable team status report.</div>
     </div>
-
-    <div class="projects-grid" id="projectsGrid"></div>
   </div>
-
-  <!-- REPORT VIEW -->
-  <div id="report-panel" class="view-panel">
-    <div style="display:flex; gap:0.7rem; margin-bottom:1rem; flex-wrap:wrap;">
-      <button class="btn-primary" onclick="generateReport()">⚡ Generate Report</button>
-      <button class="btn-sm" onclick="copyReport()">📋 Copy</button>
-      <select id="reportFormat" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:0.4rem 0.8rem;border-radius:var(--radius-sm);font-family:'Syne',sans-serif;font-size:0.8rem;">
-        <option value="markdown">Markdown</option>
-        <option value="plain">Plain Text</option>
-        <option value="html">HTML</option>
-      </select>
-    </div>
-    <div class="report-output" id="reportOutput">Click "Generate Report" to create a team-ready status report.</div>
-  </div>
-
 </div>
 
 <!-- PROJECT MODAL -->
-<div class="modal-overlay" id="projectModal">
+<div class="overlay" id="pModal">
   <div class="modal">
-    <div class="modal-title" id="modalTitle">New Project</div>
-    <div class="form-group">
-      <label class="form-label">Project Name *</label>
-      <input type="text" id="inputProjectName" placeholder="e.g. Website Redesign" />
-    </div>
-    <div class="form-group">
-      <label class="form-label">Description</label>
-      <textarea id="inputProjectDesc" rows="2" placeholder="What is this project about?"></textarea>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Overall Aim / Goal</label>
-      <textarea id="inputProjectAim" rows="2" placeholder="What are you trying to achieve?"></textarea>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Status</label>
-      <div class="status-group" id="modalProjectStatus">
-        <div class="status-pill" data-status="planned" onclick="selectModalStatus(this, 'project')">Planned</div>
-        <div class="status-pill" data-status="in-progress" onclick="selectModalStatus(this, 'project')">In Progress</div>
-        <div class="status-pill" data-status="review" onclick="selectModalStatus(this, 'project')">Review</div>
-        <div class="status-pill" data-status="pause" onclick="selectModalStatus(this, 'project')">Pause</div>
-        <div class="status-pill" data-status="blocked" onclick="selectModalStatus(this, 'project')">Blocked</div>
-        <div class="status-pill" data-status="done" onclick="selectModalStatus(this, 'project')">Done</div>
+    <div class="mtitle" id="mT">New Project</div>
+    <div class="msub" id="mS">Fill in the details to create a new project.</div>
+    <div class="fg"><label class="flabel">Project Name *</label><input type="text" id="mPN" placeholder="e.g. Website Redesign"/></div>
+    <div class="fg"><label class="flabel">Description</label><textarea id="mPD" rows="2" placeholder="What is this project about?"></textarea></div>
+    <div class="fg"><label class="flabel">Aim & Goal</label><textarea id="mPA" rows="2" placeholder="What are you trying to achieve?"></textarea></div>
+    <div class="fg">
+      <label class="flabel">Status</label>
+      <div class="sprow" id="mPSR" style="margin-bottom:0">
+        <div class="sp" data-s="planned" onclick="pickSt(this,'p')">Planned</div>
+        <div class="sp" data-s="in-progress" onclick="pickSt(this,'p')">In Progress</div>
+        <div class="sp" data-s="review" onclick="pickSt(this,'p')">Review</div>
+        <div class="sp" data-s="pause" onclick="pickSt(this,'p')">Pause</div>
+        <div class="sp" data-s="blocked" onclick="pickSt(this,'p')">Blocked</div>
+        <div class="sp" data-s="done" onclick="pickSt(this,'p')">Done</div>
       </div>
     </div>
-    <div class="form-group">
-      <label class="form-label">Color</label>
-      <div class="color-picker" id="colorPicker">
-        <div class="color-dot selected" style="background:#6c63ff" data-color="#6c63ff" onclick="selectColor(this)"></div>
-        <div class="color-dot" style="background:#22c55e" data-color="#22c55e" onclick="selectColor(this)"></div>
-        <div class="color-dot" style="background:#3b82f6" data-color="#3b82f6" onclick="selectColor(this)"></div>
-        <div class="color-dot" style="background:#ec4899" data-color="#ec4899" onclick="selectColor(this)"></div>
-        <div class="color-dot" style="background:#f97316" data-color="#f97316" onclick="selectColor(this)"></div>
-        <div class="color-dot" style="background:#eab308" data-color="#eab308" onclick="selectColor(this)"></div>
-        <div class="color-dot" style="background:#06b6d4" data-color="#06b6d4" onclick="selectColor(this)"></div>
-        <div class="color-dot" style="background:#ef4444" data-color="#ef4444" onclick="selectColor(this)"></div>
-        <div class="color-dot" style="background:#a78bfa" data-color="#a78bfa" onclick="selectColor(this)"></div>
-        <div class="color-dot" style="background:#14b8a6" data-color="#14b8a6" onclick="selectColor(this)"></div>
+    <div class="fg">
+      <label class="flabel">Color</label>
+      <div class="colorrow" id="mCR">
+        <div class="cdot sel" data-c="#7c3aed" style="background:#7c3aed" onclick="pickCol(this)"></div>
+        <div class="cdot" data-c="#0ea5e9" style="background:#0ea5e9" onclick="pickCol(this)"></div>
+        <div class="cdot" data-c="#10b981" style="background:#10b981" onclick="pickCol(this)"></div>
+        <div class="cdot" data-c="#f43f5e" style="background:#f43f5e" onclick="pickCol(this)"></div>
+        <div class="cdot" data-c="#f59e0b" style="background:#f59e0b" onclick="pickCol(this)"></div>
+        <div class="cdot" data-c="#ec4899" style="background:#ec4899" onclick="pickCol(this)"></div>
+        <div class="cdot" data-c="#06b6d4" style="background:#06b6d4" onclick="pickCol(this)"></div>
+        <div class="cdot" data-c="#a855f7" style="background:#a855f7" onclick="pickCol(this)"></div>
+        <div class="cdot" data-c="#84cc16" style="background:#84cc16" onclick="pickCol(this)"></div>
+        <div class="cdot" data-c="#f97316" style="background:#f97316" onclick="pickCol(this)"></div>
       </div>
     </div>
-    <div class="form-group">
-      <label class="form-label">Deadline</label>
-      <input type="date" id="inputProjectDeadline" />
+    <div style="display:flex;gap:.8rem">
+      <div class="fg" style="flex:0 0 90px"><label class="flabel">Icon</label><input type="text" id="mPI" placeholder="📁" maxlength="2"/></div>
+      <div class="fg" style="flex:1"><label class="flabel">Deadline</label><input type="date" id="mPDL"/></div>
     </div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal('project')">Cancel</button>
-      <button class="btn-primary" onclick="saveProject()">Save Project</button>
+    <div class="mfooter">
+      <button class="btnghost" onclick="closeM('pModal')">Cancel</button>
+      <button class="btnsave" onclick="saveProj()">Save Project</button>
     </div>
   </div>
 </div>
 
-<!-- SUBPROJECT MODAL -->
-<div class="modal-overlay" id="subprojectModal">
+<!-- SUB MODAL -->
+<div class="overlay" id="sModal">
   <div class="modal">
-    <div class="modal-title">New Sub-Project</div>
-    <input type="hidden" id="subProjectParentId" />
-    <div class="form-group">
-      <label class="form-label">Sub-Project Name *</label>
-      <input type="text" id="inputSubName" placeholder="e.g. UI Design Phase" />
-    </div>
-    <div class="form-group">
-      <label class="form-label">Aim / Goal</label>
-      <textarea id="inputSubAim" rows="2" placeholder="What does this sub-project aim to achieve?"></textarea>
-    </div>
-    <div class="form-group">
-      <label class="form-label">What I Did (Initial Update)</label>
-      <textarea id="inputSubDid" rows="2" placeholder="What have you done so far?"></textarea>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Planning / Next Steps</label>
-      <textarea id="inputSubPlan" rows="2" placeholder="How are you planning to go further?"></textarea>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Status</label>
-      <div class="status-group" id="modalSubStatus">
-        <div class="status-pill" data-status="planned" onclick="selectModalStatus(this, 'sub')">Planned</div>
-        <div class="status-pill" data-status="in-progress" onclick="selectModalStatus(this, 'sub')">In Progress</div>
-        <div class="status-pill" data-status="review" onclick="selectModalStatus(this, 'sub')">Review</div>
-        <div class="status-pill" data-status="pause" onclick="selectModalStatus(this, 'sub')">Pause</div>
-        <div class="status-pill" data-status="blocked" onclick="selectModalStatus(this, 'sub')">Blocked</div>
-        <div class="status-pill" data-status="done" onclick="selectModalStatus(this, 'sub')">Done</div>
+    <div class="mtitle">New Sub-Project</div>
+    <div class="msub">Add a sub-group under this project.</div>
+    <input type="hidden" id="sPar"/>
+    <div class="fg"><label class="flabel">Name *</label><input type="text" id="sName" placeholder="e.g. UI Design Phase"/></div>
+    <div class="fg"><label class="flabel">Aim / Goal</label><textarea id="sAim" rows="2" placeholder="What does this sub-project target?"></textarea></div>
+    <div class="fg"><label class="flabel">What I Did (First Entry)</label><textarea id="sDid" rows="2" placeholder="What have you done so far?"></textarea></div>
+    <div class="fg"><label class="flabel">Planning / Next Steps</label><textarea id="sPlan" rows="2" placeholder="How will you go further?"></textarea></div>
+    <div class="fg">
+      <label class="flabel">Status</label>
+      <div class="sprow" id="mSSR" style="margin-bottom:0">
+        <div class="sp" data-s="planned" onclick="pickSt(this,'s')">Planned</div>
+        <div class="sp" data-s="in-progress" onclick="pickSt(this,'s')">In Progress</div>
+        <div class="sp" data-s="review" onclick="pickSt(this,'s')">Review</div>
+        <div class="sp" data-s="pause" onclick="pickSt(this,'s')">Pause</div>
+        <div class="sp" data-s="blocked" onclick="pickSt(this,'s')">Blocked</div>
+        <div class="sp" data-s="done" onclick="pickSt(this,'s')">Done</div>
       </div>
     </div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal('subproject')">Cancel</button>
-      <button class="btn-primary" onclick="saveSubProject()">Save Sub-Project</button>
+    <div class="mfooter">
+      <button class="btnghost" onclick="closeM('sModal')">Cancel</button>
+      <button class="btnsave" onclick="saveSub()">Save Sub-Project</button>
     </div>
   </div>
 </div>
 
-<!-- TOAST CONTAINER -->
-<div class="toast-container" id="toastContainer"></div>
-
-<input type="file" id="importFileInput" accept=".json" style="display:none" onchange="handleImport(event)" />
+<div class="toasts" id="toasts"></div>
+<input type="file" id="impFile" accept=".json" style="display:none" onchange="handleImp(event)"/>
 
 <script>
-// =====================
 // STATE
-// =====================
-let state = {
-  projects: [],
-  lastSync: null
-};
+let S={projects:[]};
+let filt='all', editId=null, mPS='planned', mSS='planned', mCol='#7c3aed';
+let syncT=null, dirty=false;
 
-let modalProjectStatus = 'planned';
-let modalSubStatus = 'planned';
-let selectedColor = '#6c63ff';
-let currentFilter = 'all';
-let editingProjectId = null;
-
-// =====================
-// INIT
-// =====================
-document.addEventListener('DOMContentLoaded', () => {
-  updateDate();
-  loadState();
-  loadApiConfigUI();
-  render();
+// BOOT
+window.addEventListener('DOMContentLoaded',async()=>{
+  document.getElementById('datePill').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+  loadLocal(); loadCfUI(); render();
+  await autoLoad();
+  setInterval(()=>{if(dirty)doSync(true);},30000);
 });
 
-function updateDate() {
-  const d = new Date();
-  document.getElementById('currentDate').textContent =
-    d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+// LOCAL
+function loadLocal(){
+  try{const d=localStorage.getItem('pp3');if(d)S=JSON.parse(d);if(!S.projects)S.projects=[];}
+  catch(e){S={projects:[]};}
+}
+function persist(){localStorage.setItem('pp3',JSON.stringify(S));dirty=true;debounceSync();}
+function debounceSync(){if(syncT)clearTimeout(syncT);syncT=setTimeout(()=>doSync(true),2000);}
+
+// CF SYNC
+function getCF(){return{url:localStorage.getItem('pp_url')||'',key:localStorage.getItem('pp_key')||''};}
+function loadCfUI(){const cf=getCF();document.getElementById('cfUrl').value=cf.url;document.getElementById('cfKey').value=cf.key;setDB(cf.url?'idle':'off');}
+async function autoLoad(){
+  const cf=getCF();if(!cf.url||!cf.key)return;
+  setDB('sync');
+  try{
+    const r=await fetch(cf.url+'/load',{headers:{'X-Auth-Key':cf.key}});
+    if(r.ok){const d=await r.json();if(d.data&&d.data.projects){S=d.data;localStorage.setItem('pp3',JSON.stringify(S));render();setDB('on');toast('✓ Live data loaded','success');}else setDB('on');}
+    else setDB('err');
+  }catch(e){setDB('err');}
+}
+async function doSync(silent=false){
+  const cf=getCF();if(!cf.url||!cf.key)return;
+  setDB('sync');
+  try{
+    const r=await fetch(cf.url+'/sync',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Key':cf.key},body:JSON.stringify({data:S,updated_at:Date.now()})});
+    if(r.ok){dirty=false;setDB('on');if(!silent)toast('✓ Saved to D1','success');}
+    else setDB('err');
+  }catch(e){setDB('err');}
+}
+async function connectDB(){
+  const url=document.getElementById('cfUrl').value.trim();
+  const key=document.getElementById('cfKey').value.trim();
+  if(!url){toast('⚠ Enter Worker URL','warn');return;}
+  if(!key){toast('⚠ Enter API Key','warn');return;}
+  localStorage.setItem('pp_url',url);localStorage.setItem('pp_key',key);
+  toggleConfig();toast('🔄 Connecting…','info');
+  await autoLoad();
+  if(!dirty)await doSync(true);
+}
+function setDB(s){
+  const d=document.getElementById('dbDot'),l=document.getElementById('dbLbl');
+  d.className='db-dot';
+  if(s==='on'){d.classList.add('on');l.textContent='Synced';}
+  else if(s==='sync'){d.classList.add('sync');l.textContent='Syncing…';}
+  else if(s==='err'){d.classList.add('err');l.textContent='DB Error';}
+  else if(s==='idle'){l.textContent='DB Ready';}
+  else{l.textContent='Setup DB';}
 }
 
-// =====================
-// STATE PERSISTENCE
-// =====================
-function loadState() {
-  try {
-    const saved = localStorage.getItem('projectpulse_state');
-    if (saved) state = JSON.parse(saved);
-    if (!state.projects) state.projects = [];
-  } catch(e) { state = { projects: [] }; }
-}
-
-function saveState() {
-  localStorage.setItem('projectpulse_state', JSON.stringify(state));
-}
-
-function loadApiConfigUI() {
-  document.getElementById('cfWorkerUrl').value = localStorage.getItem('cf_worker_url') || '';
-  document.getElementById('cfApiKey').value = localStorage.getItem('cf_api_key') || '';
-  document.getElementById('cfAccountId').value = localStorage.getItem('cf_account_id') || '';
-  document.getElementById('cfDatabaseId').value = localStorage.getItem('cf_database_id') || '';
-}
-
-function saveApiConfig() {
-  localStorage.setItem('cf_worker_url', document.getElementById('cfWorkerUrl').value);
-  localStorage.setItem('cf_api_key', document.getElementById('cfApiKey').value);
-  localStorage.setItem('cf_account_id', document.getElementById('cfAccountId').value);
-  localStorage.setItem('cf_database_id', document.getElementById('cfDatabaseId').value);
-  toast('✓ API config saved', 'success');
-}
-
-// =====================
-// CLOUDFLARE SYNC
-// =====================
-async function syncToCloudflare() {
-  const workerUrl = localStorage.getItem('cf_worker_url');
-  const apiKey = localStorage.getItem('cf_api_key');
-  if (!workerUrl) { toast('⚠ Configure Worker URL first', 'warn'); toggleApiConfig(); return; }
-  const btn = document.getElementById('syncBtn');
-  btn.classList.add('syncing');
-  btn.textContent = '↑ Syncing...';
-  try {
-    const res = await fetch(workerUrl + '/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Auth-Key': apiKey || '' },
-      body: JSON.stringify({ data: state, updated_at: Date.now() })
-    });
-    if (res.ok) {
-      state.lastSync = new Date().toISOString();
-      saveState();
-      toast('✓ Synced to Cloudflare D1', 'success');
-    } else { toast('✗ Sync failed: ' + res.status, 'error'); }
-  } catch(e) {
-    // Fallback: save locally
-    saveState();
-    toast('⚠ Saved locally (Worker offline)', 'warn');
-  }
-  btn.classList.remove('syncing');
-  btn.textContent = '↑ Sync';
-}
-
-async function loadFromCloudflare() {
-  const workerUrl = localStorage.getItem('cf_worker_url');
-  const apiKey = localStorage.getItem('cf_api_key');
-  if (!workerUrl) { toast('⚠ Configure Worker URL first', 'warn'); return; }
-  try {
-    const res = await fetch(workerUrl + '/load', {
-      headers: { 'X-Auth-Key': apiKey || '' }
-    });
-    if (res.ok) {
-      const remote = await res.json();
-      if (remote.data) {
-        state = remote.data;
-        saveState();
-        render();
-        toast('✓ Loaded from Cloudflare D1', 'success');
-      }
-    } else { toast('✗ Load failed: ' + res.status, 'error'); }
-  } catch(e) { toast('✗ Could not reach Worker', 'error'); }
-}
-
-// =====================
-// ID GEN
-// =====================
-function genId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-}
-
-// =====================
-// MODAL
-// =====================
-function openModal(type, parentId, editId) {
-  if (type === 'project') {
-    editingProjectId = editId || null;
-    const modal = document.getElementById('projectModal');
-    if (editId) {
-      const p = state.projects.find(x => x.id === editId);
-      if (p) {
-        document.getElementById('inputProjectName').value = p.name;
-        document.getElementById('inputProjectDesc').value = p.description || '';
-        document.getElementById('inputProjectAim').value = p.aim || '';
-        document.getElementById('inputProjectDeadline').value = p.deadline || '';
-        selectedColor = p.color || '#6c63ff';
-        modalProjectStatus = p.status || 'planned';
-        document.getElementById('modalTitle').textContent = 'Edit Project';
-        updateColorPicker();
-      }
-    } else {
-      document.getElementById('inputProjectName').value = '';
-      document.getElementById('inputProjectDesc').value = '';
-      document.getElementById('inputProjectAim').value = '';
-      document.getElementById('inputProjectDeadline').value = '';
-      selectedColor = '#6c63ff';
-      modalProjectStatus = 'planned';
-      document.getElementById('modalTitle').textContent = 'New Project';
-      updateColorPicker();
-    }
-    updateModalStatusPills('project');
-    modal.classList.add('open');
-  } else if (type === 'subproject') {
-    document.getElementById('subProjectParentId').value = parentId;
-    document.getElementById('inputSubName').value = '';
-    document.getElementById('inputSubAim').value = '';
-    document.getElementById('inputSubDid').value = '';
-    document.getElementById('inputSubPlan').value = '';
-    modalSubStatus = 'planned';
-    updateModalStatusPills('sub');
-    document.getElementById('subprojectModal').classList.add('open');
-  }
-}
-
-function closeModal(type) {
-  if (type === 'project') document.getElementById('projectModal').classList.remove('open');
-  if (type === 'subproject') document.getElementById('subprojectModal').classList.remove('open');
-}
-
-function selectModalStatus(el, type) {
-  const group = type === 'project' ? 'modalProjectStatus' : 'modalSubStatus';
-  document.getElementById(group).querySelectorAll('.status-pill').forEach(p => p.classList.remove('active'));
-  el.classList.add('active');
-  if (type === 'project') modalProjectStatus = el.dataset.status;
-  else modalSubStatus = el.dataset.status;
-}
-
-function updateModalStatusPills(type) {
-  const group = type === 'project' ? 'modalProjectStatus' : 'modalSubStatus';
-  const status = type === 'project' ? modalProjectStatus : modalSubStatus;
-  document.getElementById(group).querySelectorAll('.status-pill').forEach(p => {
-    p.classList.toggle('active', p.dataset.status === status);
-  });
-}
-
-function selectColor(el) {
-  selectedColor = el.dataset.color;
-  updateColorPicker();
-}
-
-function updateColorPicker() {
-  document.querySelectorAll('.color-dot').forEach(d => {
-    d.classList.toggle('selected', d.dataset.color === selectedColor);
-  });
-}
-
-// =====================
-// SAVE PROJECT
-// =====================
-function saveProject() {
-  const name = document.getElementById('inputProjectName').value.trim();
-  if (!name) { toast('⚠ Project name is required', 'warn'); return; }
-  if (editingProjectId) {
-    const p = state.projects.find(x => x.id === editingProjectId);
-    if (p) {
-      p.name = name;
-      p.description = document.getElementById('inputProjectDesc').value.trim();
-      p.aim = document.getElementById('inputProjectAim').value.trim();
-      p.deadline = document.getElementById('inputProjectDeadline').value;
-      p.status = modalProjectStatus;
-      p.color = selectedColor;
-      p.updatedAt = new Date().toISOString();
-    }
-  } else {
-    state.projects.push({
-      id: genId(),
-      name,
-      description: document.getElementById('inputProjectDesc').value.trim(),
-      aim: document.getElementById('inputProjectAim').value.trim(),
-      deadline: document.getElementById('inputProjectDeadline').value,
-      status: modalProjectStatus,
-      color: selectedColor,
-      subprojects: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
-  }
-  saveState();
-  closeModal('project');
-  render();
-  toast('✓ Project saved', 'success');
-}
-
-function deleteProject(id) {
-  if (!confirm('Delete this project and all sub-projects?')) return;
-  state.projects = state.projects.filter(p => p.id !== id);
-  saveState();
-  render();
-  toast('🗑 Project deleted');
-}
-
-// =====================
-// SAVE SUBPROJECT
-// =====================
-function saveSubProject() {
-  const parentId = document.getElementById('subProjectParentId').value;
-  const name = document.getElementById('inputSubName').value.trim();
-  if (!name) { toast('⚠ Sub-project name is required', 'warn'); return; }
-  const parent = state.projects.find(p => p.id === parentId);
-  if (!parent) return;
-  const didText = document.getElementById('inputSubDid').value.trim();
-  const sub = {
-    id: genId(),
-    name,
-    aim: document.getElementById('inputSubAim').value.trim(),
-    plan: document.getElementById('inputSubPlan').value.trim(),
-    status: modalSubStatus,
-    tasks: [],
-    log: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  if (didText) {
-    sub.log.push({ id: genId(), date: todayStr(), text: didText });
-  }
-  parent.subprojects.push(sub);
-  parent.updatedAt = new Date().toISOString();
-  saveState();
-  closeModal('subproject');
-  render();
-  toast('✓ Sub-project added', 'success');
-}
-
-function deleteSubProject(projectId, subId) {
-  if (!confirm('Delete this sub-project?')) return;
-  const p = state.projects.find(x => x.id === projectId);
-  if (p) p.subprojects = p.subprojects.filter(s => s.id !== subId);
-  saveState();
-  render();
-  toast('🗑 Sub-project deleted');
-}
-
-// =====================
-// STATUS
-// =====================
-function setSubStatus(projectId, subId, status) {
-  const p = state.projects.find(x => x.id === projectId);
-  if (!p) return;
-  const sub = p.subprojects.find(s => s.id === subId);
-  if (!sub) return;
-  sub.status = status;
-  sub.updatedAt = new Date().toISOString();
-  updateProjectProgress(p);
-  saveState();
-  render();
-  toast('Status updated → ' + status);
-}
-
-function setProjectStatus(projectId, status) {
-  const p = state.projects.find(x => x.id === projectId);
-  if (!p) return;
-  p.status = status;
-  p.updatedAt = new Date().toISOString();
-  saveState();
-  render();
-  toast('Status updated → ' + status);
-}
-
-function updateProjectProgress(project) {
-  if (!project.subprojects.length) return;
-  const done = project.subprojects.filter(s => s.status === 'done').length;
-  // status auto-update hint
-}
-
-// =====================
-// LOG
-// =====================
-function addLog(projectId, subId) {
-  const ta = document.getElementById(`log-input-${subId}`);
-  const text = ta.value.trim();
-  if (!text) return;
-  const p = state.projects.find(x => x.id === projectId);
-  const sub = p.subprojects.find(s => s.id === subId);
-  sub.log.push({ id: genId(), date: todayStr(), text });
-  sub.updatedAt = new Date().toISOString();
-  ta.value = '';
-  saveState();
-  renderSubLog(subId, sub.log, projectId);
-  toast('✓ Log entry added');
-}
-
-function deleteLog(projectId, subId, logId) {
-  const p = state.projects.find(x => x.id === projectId);
-  const sub = p.subprojects.find(s => s.id === subId);
-  sub.log = sub.log.filter(l => l.id !== logId);
-  saveState();
-  renderSubLog(subId, sub.log, projectId);
-}
-
-function renderSubLog(subId, log, projectId) {
-  const el = document.getElementById(`log-list-${subId}`);
-  if (!el) return;
-  if (!log.length) {
-    el.innerHTML = '<div style="color:var(--muted);font-size:0.75rem;padding:0.5rem 0;">No entries yet.</div>';
-    return;
-  }
-  el.innerHTML = [...log].reverse().map(l => `
-    <div class="log-entry">
-      <span class="log-date">${l.date}</span>
-      <span class="log-text">${escHtml(l.text)}</span>
-      <button class="log-delete" onclick="deleteLog('${projectId}','${subId}','${l.id}')" title="Remove">✕</button>
-    </div>
-  `).join('');
-}
-
-// =====================
-// TASKS
-// =====================
-function addTask(projectId, subId) {
-  const ta = document.getElementById(`task-input-${subId}`);
-  const text = ta.value.trim();
-  if (!text) return;
-  const p = state.projects.find(x => x.id === projectId);
-  const sub = p.subprojects.find(s => s.id === subId);
-  if (!sub.tasks) sub.tasks = [];
-  sub.tasks.push({ id: genId(), text, done: false });
-  ta.value = '';
-  saveState();
-  renderTasks(subId, sub.tasks, projectId);
-}
-
-function toggleTask(projectId, subId, taskId) {
-  const p = state.projects.find(x => x.id === projectId);
-  const sub = p.subprojects.find(s => s.id === subId);
-  const task = sub.tasks.find(t => t.id === taskId);
-  if (task) task.done = !task.done;
-  saveState();
-  renderTasks(subId, sub.tasks, projectId);
-}
-
-function deleteTask(projectId, subId, taskId) {
-  const p = state.projects.find(x => x.id === projectId);
-  const sub = p.subprojects.find(s => s.id === subId);
-  sub.tasks = sub.tasks.filter(t => t.id !== taskId);
-  saveState();
-  renderTasks(subId, sub.tasks, projectId);
-}
-
-function renderTasks(subId, tasks, projectId) {
-  const el = document.getElementById(`tasks-list-${subId}`);
-  if (!el) return;
-  if (!tasks || !tasks.length) {
-    el.innerHTML = '<div style="color:var(--muted);font-size:0.75rem;padding:0.4rem 0;">No tasks yet.</div>';
-    return;
-  }
-  el.innerHTML = tasks.map(t => `
-    <div class="task-item">
-      <div class="task-check ${t.done ? 'checked' : ''}" onclick="toggleTask('${projectId}','${subId}','${t.id}')">
-        ${t.done ? '✓' : ''}
-      </div>
-      <span class="task-text ${t.done ? 'done' : ''}">${escHtml(t.text)}</span>
-      <button class="log-delete" onclick="deleteTask('${projectId}','${subId}','${t.id}')" title="Delete">✕</button>
-    </div>
-  `).join('');
-}
-
-// =====================
-// INLINE EDIT
-// =====================
-function updateSubField(projectId, subId, field) {
-  const el = document.getElementById(`${field}-${subId}`);
-  if (!el) return;
-  const p = state.projects.find(x => x.id === projectId);
-  const sub = p.subprojects.find(s => s.id === subId);
-  sub[field] = el.value;
-  sub.updatedAt = new Date().toISOString();
-  saveState();
-}
-
-// =====================
-// FILTER
-// =====================
-function filterProjects(status, btn) {
-  currentFilter = status;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  render();
-}
-
-// =====================
 // RENDER
-// =====================
-function render() {
-  updateStats();
-  renderProjects();
+function render(){updateStats();renderProjects();}
+function updateStats(){
+  const ps=S.projects,subs=ps.reduce((a,p)=>a+(p.subs?p.subs.length:0),0);
+  document.getElementById('sT').textContent=ps.length;
+  document.getElementById('sSubs').textContent=subs+' sub-projects';
+  document.getElementById('sP').textContent=ps.filter(p=>p.status==='in-progress').length;
+  document.getElementById('sD').textContent=ps.filter(p=>p.status==='done').length;
+  document.getElementById('sPa').textContent=ps.filter(p=>p.status==='pause').length;
+  document.getElementById('sBl').textContent=ps.filter(p=>p.status==='blocked').length;
 }
-
-function updateStats() {
-  const ps = state.projects;
-  document.getElementById('statTotal').textContent = ps.length;
-  document.getElementById('statProgress').textContent = ps.filter(p => p.status === 'in-progress').length;
-  document.getElementById('statDone').textContent = ps.filter(p => p.status === 'done').length;
-  document.getElementById('statPause').textContent = ps.filter(p => p.status === 'pause').length;
-  document.getElementById('statBlocked').textContent = ps.filter(p => p.status === 'blocked').length;
-}
-
-function calcProgress(project) {
-  if (!project.subprojects || !project.subprojects.length) {
-    return project.status === 'done' ? 100 : 0;
-  }
-  const done = project.subprojects.filter(s => s.status === 'done').length;
-  return Math.round((done / project.subprojects.length) * 100);
-}
-
-function renderProjects() {
-  const grid = document.getElementById('projectsGrid');
-  const filtered = currentFilter === 'all'
-    ? state.projects
-    : state.projects.filter(p => p.status === currentFilter);
-
-  if (!filtered.length) {
-    grid.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">📁</div>
-        <div class="empty-title">${currentFilter === 'all' ? 'No projects yet' : 'No ' + currentFilter + ' projects'}</div>
-        <div class="empty-sub">Create your first project to get started tracking progress.</div>
-        <button class="btn-primary" onclick="openModal('project')" style="margin:0 auto">+ New Project</button>
-      </div>
-    `;
+function renderProjects(){
+  const el=document.getElementById('pList');
+  const list=filt==='all'?S.projects:S.projects.filter(p=>p.status===filt);
+  if(!list.length){
+    el.innerHTML=`<div class="empty"><div class="empty-icon">📁</div><div class="empty-title">${filt==='all'?'No projects yet':'No '+filt+' projects'}</div><div class="empty-sub">Create your first project to start tracking progress.</div><button class="btn-new" onclick="openModal('project')" style="border-radius:var(--rsm);margin:0 auto">+ New Project</button></div>`;
     return;
   }
-
-  grid.innerHTML = filtered.map(p => renderProjectCard(p)).join('');
+  el.innerHTML=list.map(p=>pCard(p)).join('');
 }
 
-function renderProjectCard(p) {
-  const pct = calcProgress(p);
-  const circumference = 2 * Math.PI * 20;
-  const dashOffset = circumference - (pct / 100) * circumference;
-  const subCount = p.subprojects ? p.subprojects.length : 0;
-  const doneCount = p.subprojects ? p.subprojects.filter(s => s.status === 'done').length : 0;
-
-  return `
-    <div class="project-card" id="proj-${p.id}">
-      <div class="project-header" id="ph-${p.id}" onclick="toggleProject('${p.id}')">
-        <div class="project-color-bar" style="background:${p.color}"></div>
-        <div class="status-indicator ${p.status}"></div>
-        <div class="project-info">
-          <div class="project-name">${escHtml(p.name)}</div>
-          <div class="project-meta">
-            <span>${subCount} sub-projects</span>
-            <span>${doneCount}/${subCount} done</span>
-            ${p.deadline ? `<span>📅 ${p.deadline}</span>` : ''}
-            <span>${p.status}</span>
-          </div>
-        </div>
-        <div class="project-actions" onclick="event.stopPropagation()">
-          <div class="progress-ring">
-            <svg width="48" height="48" viewBox="0 0 48 48">
-              <circle class="bg" cx="24" cy="24" r="20"/>
-              <circle class="fill" cx="24" cy="24" r="20"
-                stroke="${p.color}"
-                stroke-dasharray="${circumference}"
-                stroke-dashoffset="${dashOffset}"/>
-            </svg>
-            <div class="progress-pct">${pct}%</div>
-          </div>
-          <button class="icon-btn" onclick="openModal('project', null, '${p.id}')" title="Edit">✎</button>
-          <button class="icon-btn danger" onclick="deleteProject('${p.id}')" title="Delete">✕</button>
-        </div>
-        <div class="chevron" id="chev-${p.id}">▾</div>
-      </div>
-
-      <div class="project-body" id="pb-${p.id}">
-        <!-- Project Status Bar -->
-        <div style="margin-bottom:1.2rem;">
-          <div class="section-title" style="margin-bottom:0.5rem;">Project Status</div>
-          <div class="status-group">
-            ${['planned','in-progress','review','pause','blocked','done'].map(s => `
-              <div class="status-pill ${p.status === s ? 'active' : ''}" data-status="${s}" onclick="setProjectStatus('${p.id}','${s}')">${s}</div>
-            `).join('')}
-          </div>
-        </div>
-
-        ${p.description || p.aim ? `
-        <div class="detail-grid" style="margin-bottom:1.2rem;">
-          ${p.description ? `<div class="detail-block"><div class="detail-block-label">Description</div><div class="detail-block-value">${escHtml(p.description)}</div></div>` : ''}
-          ${p.aim ? `<div class="detail-block"><div class="detail-block-label">Aim & Goal</div><div class="detail-block-value">${escHtml(p.aim)}</div></div>` : ''}
-        </div>` : ''}
-
-        <!-- Sub-Projects -->
-        <div class="section-header">
-          <span class="section-title">Sub-Projects (${subCount})</span>
-          <button class="btn-sm" onclick="openModal('subproject', '${p.id}')">+ Add Sub-Project</button>
-        </div>
-
-        <div class="subprojects">
-          ${p.subprojects && p.subprojects.length
-            ? p.subprojects.map(sub => renderSubProject(p.id, sub)).join('')
-            : `<div style="color:var(--muted);font-size:0.8rem;padding:0.5rem 0;">No sub-projects yet. Add one above.</div>`
-          }
-        </div>
-      </div>
+function pCard(p){
+  const subs=p.subs||[];
+  const pct=subs.length?Math.round(subs.filter(s=>s.status==='done').length/subs.length*100):(p.status==='done'?100:0);
+  const C=2*Math.PI*23, off=C-(pct/100)*C;
+  const col=p.color||'#7c3aed',icon=p.icon||'📁';
+  const done=subs.filter(s=>s.status==='done').length;
+  return`<div class="pcard" id="pc-${p.id}" style="--pc:${col}">
+<div class="phead" onclick="togP('${p.id}')">
+  <div class="paccent" style="background:${col};box-shadow:0 0 10px ${col}80"></div>
+  <div class="picon">${icon}</div>
+  <div class="pinfo">
+    <div class="pname">${esc(p.name)}</div>
+    <div class="pmeta">
+      <div class="sbadge s-${p.status}"><div class="sdot"></div>${p.status.replace('-',' ')}</div>
+      <span class="pmi">📦 ${subs.length}</span>
+      <span class="pmi">✓ ${done}/${subs.length}</span>
+      ${p.deadline?`<span class="pmi">📅 ${p.deadline}</span>`:''}
     </div>
-  `;
+  </div>
+  <div class="arcwrap"><svg width="54" height="54" viewBox="0 0 54 54"><circle class="arc-bg" cx="27" cy="27" r="23"/><circle class="arc-fill" cx="27" cy="27" r="23" stroke="${col}" stroke-dasharray="${C}" stroke-dashoffset="${off}"/></svg><div class="arcpct">${pct}%</div></div>
+  <div class="pactions" onclick="event.stopPropagation()">
+    <button class="ibtn" onclick="openModal('project','${p.id}')" title="Edit">✎</button>
+    <button class="ibtn del" onclick="delP('${p.id}')" title="Delete">✕</button>
+  </div>
+  <div class="chev" id="chev-${p.id}">▾</div>
+</div>
+<div class="pbody" id="pb-${p.id}">
+  <div style="margin-top:1rem"><div class="slbl" style="margin-bottom:.5rem">Project Status</div>
+  <div class="sprow">${['planned','in-progress','review','pause','blocked','done'].map(s=>`<div class="sp ${p.status===s?'on':''}" data-s="${s}" onclick="setPSt('${p.id}','${s}')">${s.replace('-',' ')}</div>`).join('')}</div></div>
+  ${p.desc||p.aim?`<div class="igrid" style="margin-top:1rem">
+    ${p.desc?`<div class="iblk"><div class="iblk-lbl">Description</div><textarea onblur="updP('${p.id}','desc',this.value)">${esc(p.desc)}</textarea></div>`:''}
+    ${p.aim?`<div class="iblk"><div class="iblk-lbl">Aim & Goal</div><textarea onblur="updP('${p.id}','aim',this.value)">${esc(p.aim)}</textarea></div>`:''}
+  </div>`:''}
+  <div class="srow" style="margin-top:1.2rem"><span class="slbl">Sub-Projects (${subs.length})</span><button class="btnsub" onclick="openModal('sub','${p.id}')">+ Add Sub-Project</button></div>
+  <div class="subslist" id="sl-${p.id}">${subs.length?subs.map(s=>sCard(p.id,s,col)).join(''):'<div style="color:var(--muted);font-size:.78rem;padding:.4rem 0">No sub-projects yet.</div>'}</div>
+</div></div>`;
 }
 
-function renderSubProject(projectId, sub) {
-  return `
-    <div class="subproject-card" id="sub-${sub.id}">
-      <div class="subproject-header" onclick="toggleSub('${sub.id}')">
-        <div class="status-indicator ${sub.status}"></div>
-        <div class="subproject-info">
-          <div class="subproject-name">${escHtml(sub.name)}</div>
-          ${sub.aim ? `<div class="subproject-aim">${escHtml(sub.aim)}</div>` : ''}
-        </div>
-        <div style="display:flex;gap:0.4rem;align-items:center;" onclick="event.stopPropagation()">
-          <button class="icon-btn danger" onclick="deleteSubProject('${projectId}','${sub.id}')" title="Delete">✕</button>
-        </div>
-        <div class="chevron" id="subchev-${sub.id}">▾</div>
-      </div>
-
-      <div class="subproject-body" id="sb-${sub.id}">
-        <!-- Status -->
-        <div style="margin-bottom:1rem;">
-          <div class="section-title" style="margin-bottom:0.4rem;">Status</div>
-          <div class="status-group">
-            ${['planned','in-progress','review','pause','blocked','done'].map(s => `
-              <div class="status-pill ${sub.status === s ? 'active' : ''}" data-status="${s}"
-                onclick="setSubStatus('${projectId}','${sub.id}','${s}')">${s}</div>
-            `).join('')}
-          </div>
-        </div>
-
-        <!-- Aim & Plan -->
-        <div class="detail-grid" style="margin-bottom:1rem;">
-          <div class="detail-block">
-            <div class="detail-block-label">Aim / Goal</div>
-            <textarea id="aim-${sub.id}" style="min-height:60px;"
-              onblur="updateSubField('${projectId}','${sub.id}','aim')"
-              placeholder="What is this sub-project aiming for?">${escHtml(sub.aim || '')}</textarea>
-          </div>
-          <div class="detail-block">
-            <div class="detail-block-label">Planning / Next Steps</div>
-            <textarea id="plan-${sub.id}" style="min-height:60px;"
-              onblur="updateSubField('${projectId}','${sub.id}','plan')"
-              placeholder="How are you planning to go further?">${escHtml(sub.plan || '')}</textarea>
-          </div>
-        </div>
-
-        <!-- Tasks / Checklist -->
-        <div style="margin-bottom:1rem;">
-          <div class="section-header">
-            <span class="section-title">Tasks / Checklist</span>
-          </div>
-          <div class="tasks-list" id="tasks-list-${sub.id}"></div>
-          <div class="add-log-row" style="margin-top:0.6rem;">
-            <input type="text" id="task-input-${sub.id}" placeholder="Add a task..."
-              onkeydown="if(event.key==='Enter') addTask('${projectId}','${sub.id}')" />
-            <button class="btn-sm success" onclick="addTask('${projectId}','${sub.id}')">+ Add</button>
-          </div>
-        </div>
-
-        <!-- Activity Log -->
-        <div>
-          <div class="section-header">
-            <span class="section-title">Activity Log (What I Did)</span>
-          </div>
-          <div class="activity-log">
-            <div id="log-list-${sub.id}"></div>
-            <div class="add-log-row">
-              <textarea id="log-input-${sub.id}" placeholder="What did you do today? Write your update..."
-                onkeydown="if(event.key==='Enter' && event.ctrlKey) addLog('${projectId}','${sub.id}')"></textarea>
-              <button class="btn-sm success" onclick="addLog('${projectId}','${sub.id}')">+ Log</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
+function sCard(pid,sub,col){
+  const tasks=sub.tasks||[],log=sub.log||[],doneT=tasks.filter(t=>t.done).length;
+  return`<div class="subcard" id="sc-${sub.id}">
+<div class="subhead" onclick="togS('${sub.id}')">
+  <div class="subdot" style="background:${col};box-shadow:0 0 7px ${col}80"></div>
+  <div class="subinfo"><div class="subname">${esc(sub.name)}</div><div class="subprev">${sub.aim?esc(sub.aim):'No aim set yet'}</div></div>
+  <div style="display:flex;gap:.4rem;align-items:center" onclick="event.stopPropagation()">
+    <div class="sbadge s-${sub.status}" style="font-size:.6rem"><div class="sdot"></div>${sub.status.replace('-',' ')}</div>
+    ${tasks.length?`<span style="font-size:.65rem;color:var(--muted);font-family:'JetBrains Mono',monospace">${doneT}/${tasks.length}</span>`:''}
+    <button class="ibtn del" style="width:28px;height:28px;font-size:.75rem" onclick="delS('${pid}','${sub.id}')">✕</button>
+  </div>
+  <div class="chev" id="sc-${sub.id}-ch">▾</div>
+</div>
+<div class="subbody" id="sb-${sub.id}">
+  <div class="sprow" style="margin-bottom:.9rem">${['planned','in-progress','review','pause','blocked','done'].map(s=>`<div class="sp ${sub.status===s?'on':''}" data-s="${s}" onclick="setSSt('${pid}','${sub.id}','${s}')">${s.replace('-',' ')}</div>`).join('')}</div>
+  <div class="sgrid">
+    <div class="sfield"><label>Aim / Goal</label><textarea onblur="updS('${pid}','${sub.id}','aim',this.value)" placeholder="What are you targeting?">${esc(sub.aim||'')}</textarea></div>
+    <div class="sfield"><label>Planning / Next Steps</label><textarea onblur="updS('${pid}','${sub.id}','plan',this.value)" placeholder="How will you go further?">${esc(sub.plan||'')}</textarea></div>
+  </div>
+  <div class="taskwrap"><div class="slbl" style="margin-bottom:.5rem">✅ Tasks</div><div id="tl-${sub.id}"></div>
+  <div class="addrow"><input type="text" id="ti-${sub.id}" placeholder="Add task… press Enter" onkeydown="if(event.key==='Enter')addTask('${pid}','${sub.id}')"/><button class="btnadd" onclick="addTask('${pid}','${sub.id}')">+ Add</button></div></div>
+  <div><div class="slbl" style="margin-bottom:.5rem">📝 Activity Log</div><div id="ll-${sub.id}"></div>
+  <div class="loginrow"><textarea id="li-${sub.id}" placeholder="Today's update… Ctrl+Enter to save"></textarea><button class="btnadd" style="height:fit-content;padding:.55rem .8rem" onclick="addLog('${pid}','${sub.id}')">+ Log</button></div></div>
+</div></div>`;
 }
 
-// =====================
-// TOGGLE COLLAPSE
-// =====================
-function toggleProject(id) {
-  const body = document.getElementById(`pb-${id}`);
-  const chev = document.getElementById(`chev-${id}`);
-  const header = document.getElementById(`ph-${id}`);
-  const isOpen = body.classList.contains('open');
-  body.classList.toggle('open');
-  chev.classList.toggle('open');
-  header.classList.toggle('expanded');
-  if (!isOpen) {
-    // render sub-content after expand
-    const p = state.projects.find(x => x.id === id);
-    if (p && p.subprojects) {
-      p.subprojects.forEach(sub => {
-        renderSubLog(sub.id, sub.log || [], id);
-        renderTasks(sub.id, sub.tasks || [], id);
-      });
+// TOGGLE
+function togP(id){
+  const b=document.getElementById('pb-'+id),c=document.getElementById('chev-'+id);
+  const open=b.classList.toggle('open');c.classList.toggle('open',open);
+  if(open){const p=S.projects.find(x=>x.id===id);if(p&&p.subs)p.subs.forEach(s=>{rTasks(s.id,s.tasks||[]);rLog(s.id,s.log||[],id);});}
+}
+function togS(id){document.getElementById('sb-'+id).classList.toggle('open');document.getElementById('sc-'+id+'-ch').classList.toggle('open');}
+
+// CRUD PROJECTS
+function openModal(type,id){
+  if(type==='project'){
+    editId=id&&S.projects.find(x=>x.id===id)?id:null;
+    if(editId){
+      const p=S.projects.find(x=>x.id===id);
+      document.getElementById('mPN').value=p.name;document.getElementById('mPD').value=p.desc||'';
+      document.getElementById('mPA').value=p.aim||'';document.getElementById('mPDL').value=p.deadline||'';
+      document.getElementById('mPI').value=p.icon||'📁';mCol=p.color||'#7c3aed';mPS=p.status||'planned';
+      document.getElementById('mT').textContent='Edit Project';document.getElementById('mS').textContent='Update project details.';
+    }else{
+      ['mPN','mPD','mPA'].forEach(i=>document.getElementById(i).value='');
+      document.getElementById('mPI').value='📁';document.getElementById('mPDL').value='';
+      mCol='#7c3aed';mPS='planned';document.getElementById('mT').textContent='New Project';
+      document.getElementById('mS').textContent='Fill in the details to create a new project.';
     }
+    syncPills('mPSR',mPS);syncCols();document.getElementById('pModal').classList.add('open');
+  }else{
+    document.getElementById('sPar').value=id;
+    ['sName','sAim','sDid','sPlan'].forEach(i=>document.getElementById(i).value='');
+    mSS='planned';syncPills('mSSR',mSS);document.getElementById('sModal').classList.add('open');
   }
 }
+function closeM(id){document.getElementById(id).classList.remove('open');}
+function saveProj(){
+  const name=document.getElementById('mPN').value.trim();if(!name){toast('⚠ Name required','warn');return;}
+  if(editId){
+    const p=S.projects.find(x=>x.id===editId);
+    if(p){p.name=name;p.desc=document.getElementById('mPD').value.trim();p.aim=document.getElementById('mPA').value.trim();p.deadline=document.getElementById('mPDL').value;p.status=mPS;p.color=mCol;p.icon=document.getElementById('mPI').value.trim()||'📁';p.u=now();}
+  }else{
+    S.projects.push({id:uid(),name,desc:document.getElementById('mPD').value.trim(),aim:document.getElementById('mPA').value.trim(),deadline:document.getElementById('mPDL').value,status:mPS,color:mCol,icon:document.getElementById('mPI').value.trim()||'📁',subs:[],c:now(),u:now()});
+  }
+  persist();closeM('pModal');render();toast('✓ Project saved','success');
+}
+function delP(id){if(!confirm('Delete project?'))return;S.projects=S.projects.filter(p=>p.id!==id);persist();render();toast('🗑 Deleted');}
+function setPSt(pid,s){const p=S.projects.find(x=>x.id===pid);if(p){p.status=s;p.u=now();persist();render();toast('→ '+s);}}
+function updP(pid,f,v){const p=S.projects.find(x=>x.id===pid);if(p){p[f]=v;p.u=now();persist();}}
 
-function toggleSub(subId) {
-  const body = document.getElementById(`sb-${subId}`);
-  const chev = document.getElementById(`subchev-${subId}`);
-  body.classList.toggle('open');
-  chev.classList.toggle('open');
+// CRUD SUBS
+function saveSub(){
+  const pid=document.getElementById('sPar').value,name=document.getElementById('sName').value.trim();
+  if(!name){toast('⚠ Name required','warn');return;}
+  const p=S.projects.find(x=>x.id===pid);if(!p)return;
+  const did=document.getElementById('sDid').value.trim();
+  const sub={id:uid(),name,aim:document.getElementById('sAim').value.trim(),plan:document.getElementById('sPlan').value.trim(),status:mSS,tasks:[],log:[],c:now(),u:now()};
+  if(did)sub.log.push({id:uid(),date:today(),text:did});
+  p.subs.push(sub);p.u=now();persist();closeM('sModal');render();toast('✓ Sub-project added','success');
+}
+function delS(pid,sid){if(!confirm('Delete sub-project?'))return;const p=S.projects.find(x=>x.id===pid);if(p){p.subs=p.subs.filter(s=>s.id!==sid);p.u=now();}persist();render();toast('🗑 Deleted');}
+function setSSt(pid,sid,s){const p=S.projects.find(x=>x.id===pid);if(!p)return;const sub=p.subs.find(x=>x.id===sid);if(sub){sub.status=s;sub.u=now();}persist();render();toast('→ '+s);}
+function updS(pid,sid,f,v){const p=S.projects.find(x=>x.id===pid);if(!p)return;const sub=p.subs.find(x=>x.id===sid);if(sub){sub[f]=v;sub.u=now();persist();}}
+
+// TASKS
+function addTask(pid,sid){
+  const inp=document.getElementById('ti-'+sid),text=inp.value.trim();if(!text)return;
+  const sub=findSub(pid,sid);if(!sub.tasks)sub.tasks=[];
+  sub.tasks.push({id:uid(),text,done:false});inp.value='';persist();rTasks(sid,sub.tasks);toast('✓ Task added');
+}
+function togTask(pid,sid,tid){const sub=findSub(pid,sid);const t=sub.tasks.find(x=>x.id===tid);if(t)t.done=!t.done;persist();rTasks(sid,sub.tasks);}
+function delTask(pid,sid,tid){const sub=findSub(pid,sid);sub.tasks=sub.tasks.filter(t=>t.id!==tid);persist();rTasks(sid,sub.tasks);}
+function rTasks(sid,tasks){
+  const el=document.getElementById('tl-'+sid);if(!el)return;
+  const pid=findPid(sid);
+  if(!tasks||!tasks.length){el.innerHTML='<div style="color:var(--muted);font-size:.75rem;padding:.3rem .6rem">No tasks yet.</div>';return;}
+  el.innerHTML=tasks.map(t=>`<div class="titem"><div class="tcheck ${t.done?'done':''}" onclick="togTask('${pid}','${sid}','${t.id}')">${t.done?'✓':''}</div><span class="ttext ${t.done?'done':''}">${esc(t.text)}</span><button class="tdel" onclick="delTask('${pid}','${sid}','${t.id}')">✕</button></div>`).join('');
 }
 
-// =====================
-// VIEW SWITCH
-// =====================
-function switchView(view, btn) {
-  document.querySelectorAll('.view-tab').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById(view + '-panel').classList.add('active');
+// LOG
+function addLog(pid,sid){
+  const ta=document.getElementById('li-'+sid),text=ta.value.trim();if(!text)return;
+  const sub=findSub(pid,sid);if(!sub.log)sub.log=[];
+  sub.log.push({id:uid(),date:today(),text});ta.value='';persist();rLog(sid,sub.log,pid);toast('✓ Logged');
+}
+function delLog(pid,sid,lid){const sub=findSub(pid,sid);sub.log=sub.log.filter(l=>l.id!==lid);persist();rLog(sid,sub.log,pid);}
+function rLog(sid,log,pid){
+  const el=document.getElementById('ll-'+sid);if(!el)return;
+  const p=pid||findPid(sid);
+  if(!log||!log.length){el.innerHTML='<div style="color:var(--muted);font-size:.75rem;padding:.3rem .6rem">No entries yet.</div>';return;}
+  el.innerHTML=[...log].reverse().map(l=>`<div class="lentry"><span class="ldate">${l.date}</span><span class="ltext">${esc(l.text)}</span><button class="ldel" onclick="delLog('${p}','${sid}','${l.id}')">✕</button></div>`).join('');
 }
 
-// =====================
+// FILTER & VIEW
+function doFilter(f,btn){filt=f;document.querySelectorAll('.fchip').forEach(b=>b.classList.remove('active'));btn.classList.add('active');render();}
+function switchView(v,btn){document.querySelectorAll('.vpill').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.vp').forEach(p=>p.classList.remove('active'));btn.classList.add('active');document.getElementById(v+'-panel').classList.add('active');}
+
+// MODAL HELPERS
+function pickSt(el,t){const r=t==='p'?'mPSR':'mSSR';document.getElementById(r).querySelectorAll('.sp').forEach(s=>s.classList.remove('on'));el.classList.add('on');if(t==='p')mPS=el.dataset.s;else mSS=el.dataset.s;}
+function syncPills(rowId,s){document.getElementById(rowId).querySelectorAll('.sp').forEach(p=>p.classList.toggle('on',p.dataset.s===s));}
+function pickCol(el){mCol=el.dataset.c;syncCols();}
+function syncCols(){document.querySelectorAll('.cdot').forEach(d=>d.classList.toggle('sel',d.dataset.c===mCol));}
+
 // REPORT
-// =====================
-function generateReport() {
-  const format = document.getElementById('reportFormat').value;
-  const date = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-  let out = '';
-
-  if (format === 'markdown') {
-    out = `# 📊 Project Status Report\n**Date:** ${date}\n\n`;
-    state.projects.forEach(p => {
-      const pct = calcProgress(p);
-      out += `## ${p.name} [${p.status.toUpperCase()}] — ${pct}% complete\n`;
-      if (p.description) out += `> ${p.description}\n`;
-      if (p.aim) out += `**Aim:** ${p.aim}\n`;
-      out += '\n';
-      if (p.subprojects && p.subprojects.length) {
-        p.subprojects.forEach(sub => {
-          out += `### ↳ ${sub.name} [${sub.status.toUpperCase()}]\n`;
-          if (sub.aim) out += `**Aim:** ${sub.aim}\n`;
-          if (sub.plan) out += `**Plan:** ${sub.plan}\n`;
-          if (sub.log && sub.log.length) {
-            out += `**Recent Activity:**\n`;
-            sub.log.slice(-3).forEach(l => { out += `- [${l.date}] ${l.text}\n`; });
-          }
-          if (sub.tasks && sub.tasks.length) {
-            const done = sub.tasks.filter(t => t.done).length;
-            out += `**Tasks:** ${done}/${sub.tasks.length} done\n`;
-          }
-          out += '\n';
-        });
-      }
-      out += '---\n\n';
-    });
-  } else if (format === 'plain') {
-    out = `PROJECT STATUS REPORT — ${date}\n${'='.repeat(50)}\n\n`;
-    state.projects.forEach(p => {
-      const pct = calcProgress(p);
-      out += `[${p.status.toUpperCase()}] ${p.name} — ${pct}% complete\n`;
-      if (p.aim) out += `  Aim: ${p.aim}\n`;
-      if (p.subprojects && p.subprojects.length) {
-        p.subprojects.forEach(sub => {
-          out += `  >> ${sub.name} [${sub.status.toUpperCase()}]\n`;
-          if (sub.plan) out += `     Plan: ${sub.plan}\n`;
-          if (sub.log && sub.log.length) {
-            out += `     Latest: ${sub.log[sub.log.length-1].text}\n`;
-          }
-        });
-      }
-      out += '\n';
-    });
-  } else {
-    out = `<h1>📊 Project Status Report</h1><p><strong>Date:</strong> ${date}</p>`;
-    state.projects.forEach(p => {
-      const pct = calcProgress(p);
-      out += `<h2>${escHtml(p.name)} <span style="color:gray">[${p.status}]</span></h2>`;
-      out += `<p>Progress: <strong>${pct}%</strong></p>`;
-      if (p.aim) out += `<p><strong>Aim:</strong> ${escHtml(p.aim)}</p>`;
-      if (p.subprojects && p.subprojects.length) {
-        out += '<ul>';
-        p.subprojects.forEach(sub => {
-          out += `<li><strong>${escHtml(sub.name)}</strong> [${sub.status}]`;
-          if (sub.plan) out += ` — ${escHtml(sub.plan)}`;
-          out += '</li>';
-        });
-        out += '</ul>';
-      }
-    });
-  }
-
-  document.getElementById('reportOutput').textContent = out;
-  toast('✓ Report generated');
-}
-
-function copyReport() {
-  const text = document.getElementById('reportOutput').textContent;
-  navigator.clipboard.writeText(text).then(() => toast('✓ Copied to clipboard'));
-}
-
-// =====================
-// IMPORT/EXPORT
-// =====================
-function exportData() {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `projectpulse-${todayStr()}.json`;
-  a.click();
-  toast('✓ Exported JSON');
-}
-
-function importData() {
-  document.getElementById('importFileInput').click();
-}
-
-function handleImport(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    try {
-      const imported = JSON.parse(ev.target.result);
-      if (imported.projects) {
-        state = imported;
-        saveState();
-        render();
-        toast('✓ Data imported successfully');
-      }
-    } catch(err) { toast('✗ Invalid JSON file', 'error'); }
-  };
-  reader.readAsText(file);
-  e.target.value = '';
-}
-
-// =====================
-// WORKER SCRIPT DOWNLOAD
-// =====================
-function downloadWorkerScript() {
-  const script = `// Cloudflare Worker + D1 for ProjectPulse
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    const authKey = request.headers.get('X-Auth-Key');
-    const SECRET = env.AUTH_KEY || 'your-secret-key';
-
-    if (authKey !== SECRET) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+function genReport(){
+  const fmt=document.getElementById('rFmt').value;
+  const date=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  let out='';
+  if(fmt==='md'){
+    out=`# 📊 ProjectPulse Report\n**Date:** ${date} | **Projects:** ${S.projects.length}\n\n---\n\n`;
+    S.projects.forEach(p=>{
+      const pct=p.subs&&p.subs.length?Math.round(p.subs.filter(s=>s.status==='done').length/p.subs.length*100):(p.status==='done'?100:0);
+      out+=`## ${p.icon||'📁'} ${p.name} — \`${p.status}\` ${pct}%\n`;
+      if(p.aim)out+=`> **Goal:** ${p.aim}\n\n`;
+      if(p.subs&&p.subs.length)p.subs.forEach(s=>{
+        out+=`### ↳ ${s.name} [\`${s.status}\`]\n`;
+        if(s.aim)out+=`**Aim:** ${s.aim}\n`;
+        if(s.plan)out+=`**Plan:** ${s.plan}\n`;
+        if(s.log&&s.log.length){out+=`**Updates:**\n`;s.log.slice(-3).forEach(l=>out+=`- \`${l.date}\` ${l.text}\n`);}
+        if(s.tasks&&s.tasks.length){const d=s.tasks.filter(t=>t.done).length;out+=`**Tasks:** ${d}/${s.tasks.length}\n`;}
+        out+='\n';
       });
-    }
-
-    const cors = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-Auth-Key',
-      'Content-Type': 'application/json'
-    };
-
-    if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
-
-    // Init DB
-    await env.DB.exec(\`CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, data TEXT, updated_at INTEGER);\`);
-
-    if (url.pathname === '/sync' && request.method === 'POST') {
-      const body = await request.json();
-      await env.DB.prepare('INSERT OR REPLACE INTO projects (id, data, updated_at) VALUES (?, ?, ?)')
-        .bind('main', JSON.stringify(body.data), Date.now()).run();
-      return new Response(JSON.stringify({ ok: true }), { headers: cors });
-    }
-
-    if (url.pathname === '/load') {
-      const row = await env.DB.prepare('SELECT data FROM projects WHERE id = ?').bind('main').first();
-      if (row) return new Response(JSON.stringify({ data: JSON.parse(row.data) }), { headers: cors });
-      return new Response(JSON.stringify({ data: null }), { headers: cors });
-    }
-
-    return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: cors });
+      out+='---\n\n';
+    });
+  }else{
+    out=`PROJECT STATUS REPORT — ${date}\n${'═'.repeat(55)}\n\n`;
+    S.projects.forEach(p=>{
+      const pct=p.subs&&p.subs.length?Math.round(p.subs.filter(s=>s.status==='done').length/p.subs.length*100):0;
+      out+=`[${p.status.toUpperCase()}] ${p.name} — ${pct}%\n`;
+      if(p.aim)out+=`  Goal: ${p.aim}\n`;
+      if(p.subs&&p.subs.length)p.subs.forEach(s=>out+=`  >> ${s.name} [${s.status}]${s.plan?' — '+s.plan:''}\n`);
+      out+='\n';
+    });
   }
-};
-`;
-  const blob = new Blob([script], { type: 'text/javascript' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'projectpulse-worker.js';
-  a.click();
-  toast('✓ Worker script downloaded');
+  document.getElementById('rOut').textContent=out;toast('✓ Report ready','success');
 }
+function copyReport(){navigator.clipboard.writeText(document.getElementById('rOut').textContent).then(()=>toast('✓ Copied!','success'));}
 
-// =====================
+// IMPORT/EXPORT
+function doExport(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`projectpulse-${today()}.json`;a.click();toast('✓ Exported');}
+function doImport(){document.getElementById('impFile').click();}
+function handleImp(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.projects){S=d;persist();render();toast('✓ Imported','success');}}catch(e){toast('✗ Invalid file','error');}};r.readAsText(f);e.target.value='';}
+
 // UTILS
-// =====================
-function toggleApiConfig() {
-  document.getElementById('apiConfig').classList.toggle('open');
+function toggleConfig(){document.getElementById('cfgDrawer').classList.toggle('open');}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function now(){return new Date().toISOString();}
+function today(){return new Date().toISOString().slice(0,10);}
+function esc(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function findPid(sid){for(const p of S.projects)if(p.subs&&p.subs.find(s=>s.id===sid))return p.id;return'';}
+function findSub(pid,sid){const p=S.projects.find(x=>x.id===pid);return p?p.subs.find(s=>s.id===sid):null;}
+
+function toast(msg,type='info'){
+  const c=document.getElementById('toasts'),el=document.createElement('div');
+  el.className='toast '+(type||'');
+  const ic={success:'✅',error:'❌',warn:'⚠️',info:'💬'};
+  el.innerHTML=`<span>${ic[type]||'💬'}</span><span>${msg}</span>`;
+  c.appendChild(el);setTimeout(()=>el.remove(),3200);
 }
 
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function escHtml(str) {
-  if (!str) return '';
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function toast(msg, type = 'info') {
-  const c = document.getElementById('toastContainer');
-  const el = document.createElement('div');
-  el.className = 'toast';
-  const icons = { success: '✓', error: '✗', warn: '⚠', info: 'ℹ' };
-  el.innerHTML = `<span>${icons[type] || 'ℹ'}</span><span>${msg}</span>`;
-  if (type === 'success') el.style.borderColor = 'var(--green)';
-  if (type === 'error') el.style.borderColor = 'var(--red)';
-  if (type === 'warn') el.style.borderColor = 'var(--yellow)';
-  c.appendChild(el);
-  setTimeout(() => el.remove(), 3200);
-}
-
-// Close modals on backdrop click
-document.querySelectorAll('.modal-overlay').forEach(o => {
-  o.addEventListener('click', e => {
-    if (e.target === o) {
-      o.classList.remove('open');
-    }
-  });
+document.querySelectorAll('.overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});});
+document.addEventListener('click',e=>{
+  const dr=document.getElementById('cfgDrawer'),btn=document.querySelector('.db-btn');
+  if(dr.classList.contains('open')&&!dr.contains(e.target)&&!btn.contains(e.target))dr.classList.remove('open');
 });
 </script>
 </body>
 </html>
-`;

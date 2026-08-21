@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ProjectPulse</title>
+<title>Planyourproject</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -52,6 +52,18 @@ header{position:sticky;top:0;z-index:200;background:rgba(5,5,10,.85);backdrop-fi
 /* CONFIG DRAWER */
 .config-drawer{position:fixed;top:68px;right:0;width:360px;background:var(--card);border:1px solid var(--border2);border-right:none;border-top:none;border-radius:0 0 0 var(--rlg);padding:1.5rem;z-index:150;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);box-shadow:-20px 20px 60px rgba(0,0,0,.5);}
 .config-drawer.open{transform:translateX(0);}
+.auth-modal{max-width:430px;}
+.auth-tabs{display:flex;gap:.4rem;margin:1rem 0 1.2rem;padding:.25rem;background:rgba(255,255,255,.04);border-radius:var(--rsm);}
+.auth-tab{flex:1;border:0;background:transparent;color:var(--muted);padding:.55rem;border-radius:6px;font:600 .78rem 'Outfit',sans-serif;cursor:pointer;}
+.auth-tab.active{background:var(--violet);color:white;}
+.auth-note{font-size:.74rem;color:var(--muted);line-height:1.5;margin-top:.9rem;}
+.auth-error{display:none;color:var(--rose);font-size:.76rem;margin-bottom:.8rem;}
+.auth-error.show{display:block;}
+.auth-divider{display:flex;align-items:center;gap:.6rem;color:var(--muted);font-size:.7rem;margin:1rem 0;}
+.auth-divider::before,.auth-divider::after{content:'';height:1px;background:var(--border);flex:1;}
+.auth-google{width:100%;border:1px solid var(--border2);background:white;color:#222;padding:.65rem;border-radius:var(--rsm);font:600 .82rem 'Outfit',sans-serif;cursor:pointer;}
+.auth-google:hover{background:#f1f1f1;}
+.account-name{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .cfg-title{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--violet2);margin-bottom:1rem;}
 .cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.8rem;}
 .flabel{font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.3rem;display:block;}
@@ -252,7 +264,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--violet);box-shadow:0 
 <header>
   <div class="logo-wrap">
     <div class="logo-icon">⚡</div>
-    <div class="logo-text">ProjectPulse</div>
+    <div class="logo-text">Planyourproject</div>
   </div>
   <div class="hcenter">
     <button class="vpill active" onclick="switchView('projects',this)">📁 Projects</button>
@@ -260,26 +272,33 @@ input:focus,textarea:focus,select:focus{border-color:var(--violet);box-shadow:0 
   </div>
   <div class="hright">
     <div class="date-pill" id="datePill"></div>
-    <div class="db-btn" onclick="toggleConfig()" title="Database settings">
+    <div class="db-btn" id="accountBtn" onclick="toggleAuth()" title="Account">
       <div class="db-dot" id="dbDot"></div>
-      <span id="dbLbl">Setup DB</span>
+      <span class="account-name" id="dbLbl">Sign in</span>
     </div>
     <button class="btn-new" onclick="openModal('project')">+ New Project</button>
   </div>
 </header>
 
-<!-- CONFIG DRAWER -->
-<div class="config-drawer" id="cfgDrawer">
-  <div class="cfg-title">☁ Cloudflare D1 — Auto Sync</div>
-  <div class="cfg-grid">
-    <div><label class="flabel">Worker URL</label><input type="text" id="cfUrl" placeholder="https://your-worker.workers.dev"/></div>
-    <div><label class="flabel">API Key</label><input type="text" id="cfKey" placeholder="your-secret-key"/></div>
-  </div>
-  <button class="btn-connect" onclick="connectDB()">⚡ Connect — Auto Sync Enabled</button>
-  <div style="margin-top:.8rem;font-size:.68rem;color:var(--muted);line-height:1.8;">
-    ✅ Every change auto-saves to D1 in 2 seconds<br>
-    ✅ Page open = loads latest data automatically<br>
-    ✅ Works offline with localStorage fallback
+<!-- ACCOUNT MODAL -->
+<div class="overlay" id="authModal">
+  <div class="modal auth-modal">
+    <div class="mtitle">Your workspace</div>
+    <div class="msub" id="authSubtitle">Sign in to keep your projects available on every device.</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="loginTab" onclick="setAuthMode('login')">Sign in</button>
+      <button class="auth-tab" id="signupTab" onclick="setAuthMode('signup')">Create account</button>
+    </div>
+    <form onsubmit="submitAuth(event)">
+      <div class="fg" id="authNameField" style="display:none"><label class="flabel">Your name</label><input type="text" id="authName" autocomplete="name"/></div>
+      <div class="fg"><label class="flabel">Email</label><input type="email" id="authEmail" autocomplete="email" required/></div>
+      <div class="fg"><label class="flabel">Password</label><input type="password" id="authPassword" minlength="8" autocomplete="current-password" required/></div>
+      <div class="auth-error" id="authError"></div>
+      <div class="mfooter"><button class="btnsave" id="authSubmit" type="submit">Sign in</button></div>
+    </form>
+    <div class="auth-divider"><span>or</span></div>
+    <button class="auth-google" type="button" onclick="signInWithGoogle()">Continue with Google</button>
+    <div class="auth-note">Your projects are stored privately under your account. Passwords are protected with PBKDF2 hashing and sessions use secure HTTP-only cookies.</div>
   </div>
 </div>
 
@@ -405,13 +424,14 @@ input:focus,textarea:focus,select:focus{border-color:var(--violet);box-shadow:0 
 // STATE
 let S={projects:[]};
 let filt='all', editId=null, mPS='planned', mSS='planned', mCol='#7c3aed';
-let syncT=null, dirty=false;
+let syncT=null, dirty=false, currentUser=null, authMode='login';
 
 // BOOT
 window.addEventListener('DOMContentLoaded',async()=>{
   document.getElementById('datePill').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
-  loadLocal(); loadCfUI(); render();
-  await autoLoad();
+  handleAuthRedirect();
+  loadLocal(); render();
+  await checkSession();
   setInterval(()=>{if(dirty)doSync(true);},30000);
 });
 
@@ -420,39 +440,33 @@ function loadLocal(){
   try{const d=localStorage.getItem('pp3');if(d)S=JSON.parse(d);if(!S.projects)S.projects=[];}
   catch(e){S={projects:[]};}
 }
-function persist(){localStorage.setItem('pp3',JSON.stringify(S));dirty=true;debounceSync();}
+function persist(){localStorage.setItem('pp3',JSON.stringify(S));dirty=true;if(currentUser)debounceSync();}
 function debounceSync(){if(syncT)clearTimeout(syncT);syncT=setTimeout(()=>doSync(true),2000);}
 
-// CF SYNC
-function getCF(){return{url:localStorage.getItem('pp_url')||'',key:localStorage.getItem('pp_key')||''};}
-function loadCfUI(){const cf=getCF();document.getElementById('cfUrl').value=cf.url;document.getElementById('cfKey').value=cf.key;setDB(cf.url?'idle':'off');}
+// ACCOUNT AND SYNC
+async function api(path,options={}){return fetch(path,{...options,credentials:'same-origin',headers:{'Content-Type':'application/json',...(options.headers||{})}});}
+function handleAuthRedirect(){const params=new URLSearchParams(location.search);if(params.get('auth_success'))toast('✓ Google login successful','success');if(params.get('auth_error'))toast('⚠ Google login could not be completed','warn');if(params.has('auth_success')||params.has('auth_error'))history.replaceState({},'',location.pathname);}
+function signInWithGoogle(){window.location.href='/api/auth/google';}
+async function checkSession(){try{const r=await api('/api/me');const d=await r.json();currentUser=d.user||null;updateAccountUI();if(currentUser)await autoLoad();else{setDB('off');toggleAuth(true);}}catch(e){setDB('err');toggleAuth(true);}}
+function updateAccountUI(){document.getElementById('dbLbl').textContent=currentUser?currentUser.name:'Sign in';setDB(currentUser?'on':'off');}
+function toggleAuth(forceOpen=false){const modal=document.getElementById('authModal');if(forceOpen)modal.classList.add('open');else if(currentUser)logout();else modal.classList.toggle('open');}
+function setAuthMode(mode){authMode=mode;document.getElementById('loginTab').classList.toggle('active',mode==='login');document.getElementById('signupTab').classList.toggle('active',mode==='signup');document.getElementById('authNameField').style.display=mode==='signup'?'block':'none';document.getElementById('authSubmit').textContent=mode==='signup'?'Create account':'Sign in';document.getElementById('authSubtitle').textContent=mode==='signup'?'Create an account to keep your projects available on every device.':'Sign in to keep your projects available on every device.';document.getElementById('authError').classList.remove('show');}
+async function submitAuth(event){event.preventDefault();const error=document.getElementById('authError'),submit=document.getElementById('authSubmit');error.classList.remove('show');submit.disabled=true;const payload={email:document.getElementById('authEmail').value.trim(),password:document.getElementById('authPassword').value};if(authMode==='signup')payload.name=document.getElementById('authName').value.trim();try{const r=await api(authMode==='signup'?'/api/signup':'/api/login',{method:'POST',body:JSON.stringify(payload)});const d=await r.json();if(!r.ok)throw new Error(d.error||'Unable to authenticate.');currentUser=(await(await api('/api/me')).json()).user;document.getElementById('authModal').classList.remove('open');updateAccountUI();await autoLoad();toast('✓ Welcome, '+currentUser.name,'success');}catch(e){error.textContent=e.message;error.classList.add('show');}finally{submit.disabled=false;}}
+async function logout(){await api('/api/logout',{method:'POST'});currentUser=null;dirty=false;S={projects:[]};localStorage.removeItem('pp3');render();updateAccountUI();toggleAuth(true);}
 async function autoLoad(){
-  const cf=getCF();if(!cf.url||!cf.key)return;
   setDB('sync');
-  try{
-    const r=await fetch(cf.url+'/load',{headers:{'X-Auth-Key':cf.key}});
+  try{const r=await api('/load');
     if(r.ok){const d=await r.json();if(d.data&&d.data.projects){S=d.data;localStorage.setItem('pp3',JSON.stringify(S));render();setDB('on');toast('✓ Live data loaded','success');}else setDB('on');}
-    else setDB('err');
+    else if(r.status===401){currentUser=null;updateAccountUI();toggleAuth(true);}else setDB('err');
   }catch(e){setDB('err');}
 }
 async function doSync(silent=false){
-  const cf=getCF();if(!cf.url||!cf.key)return;
+  if(!currentUser)return;
   setDB('sync');
-  try{
-    const r=await fetch(cf.url+'/sync',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Key':cf.key},body:JSON.stringify({data:S,updated_at:Date.now()})});
+  try{const r=await api('/sync',{method:'POST',body:JSON.stringify({data:S,updated_at:Date.now()})});
     if(r.ok){dirty=false;setDB('on');if(!silent)toast('✓ Saved to D1','success');}
     else setDB('err');
   }catch(e){setDB('err');}
-}
-async function connectDB(){
-  const url=document.getElementById('cfUrl').value.trim();
-  const key=document.getElementById('cfKey').value.trim();
-  if(!url){toast('⚠ Enter Worker URL','warn');return;}
-  if(!key){toast('⚠ Enter API Key','warn');return;}
-  localStorage.setItem('pp_url',url);localStorage.setItem('pp_key',key);
-  toggleConfig();toast('🔄 Connecting…','info');
-  await autoLoad();
-  if(!dirty)await doSync(true);
 }
 function setDB(s){
   const d=document.getElementById('dbDot'),l=document.getElementById('dbLbl');
@@ -460,8 +474,7 @@ function setDB(s){
   if(s==='on'){d.classList.add('on');l.textContent='Synced';}
   else if(s==='sync'){d.classList.add('sync');l.textContent='Syncing…';}
   else if(s==='err'){d.classList.add('err');l.textContent='DB Error';}
-  else if(s==='idle'){l.textContent='DB Ready';}
-  else{l.textContent='Setup DB';}
+  else{l.textContent=currentUser?'Offline':'Sign in';}
 }
 
 // RENDER
@@ -654,7 +667,7 @@ function genReport(){
   const date=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   let out='';
   if(fmt==='md'){
-    out=`# 📊 ProjectPulse Report\n**Date:** ${date} | **Projects:** ${S.projects.length}\n\n---\n\n`;
+    out=`# 📊 Planyourproject Report\n**Date:** ${date} | **Projects:** ${S.projects.length}\n\n---\n\n`;
     S.projects.forEach(p=>{
       const pct=p.subs&&p.subs.length?Math.round(p.subs.filter(s=>s.status==='done').length/p.subs.length*100):(p.status==='done'?100:0);
       out+=`## ${p.icon||'📁'} ${p.name} — \`${p.status}\` ${pct}%\n`;
@@ -684,7 +697,7 @@ function genReport(){
 function copyReport(){navigator.clipboard.writeText(document.getElementById('rOut').textContent).then(()=>toast('✓ Copied!','success'));}
 
 // IMPORT/EXPORT
-function doExport(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`projectpulse-${today()}.json`;a.click();toast('✓ Exported');}
+function doExport(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`planyourproject-${today()}.json`;a.click();toast('✓ Exported');}
 function doImport(){document.getElementById('impFile').click();}
 function handleImp(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.projects){S=d;persist();render();toast('✓ Imported','success');}}catch(e){toast('✗ Invalid file','error');}};r.readAsText(f);e.target.value='';}
 

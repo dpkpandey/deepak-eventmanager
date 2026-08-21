@@ -46,13 +46,21 @@ Set the public site URL so the callback redirects correctly:
 wrangler secret put SITE_URL
 ```
 
-### 5. Deploy
+### 5. Deploy to Cloudflare Pages
 
 ```bash
-wrangler deploy
+wrangler pages deploy . --project-name deepak-eventmanager
 ```
 
-Open the deployed site and create an account. Each account has a private project workspace, protected by a secure HTTP-only session cookie. Every change is saved to D1 after a short delay, and the export button can be used for an additional backup.
+In the Cloudflare Pages project, bind the D1 database as `DB` and add these Production environment variables:
+
+```text
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+SITE_URL=https://deepak-eventmanager.pages.dev
+```
+
+Redeploy after adding the variables. Open the deployed site and create an account or choose **Continue with Google**. Each account has a private project workspace, protected by a secure HTTP-only session cookie. Every change is saved to D1 after a short delay, and the export button can be used for an additional backup.
 
 ### Local development
 
